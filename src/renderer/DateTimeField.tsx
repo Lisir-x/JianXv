@@ -3,9 +3,9 @@ import {DateTime} from 'luxon'
 import {createPortal} from 'react-dom'
 import {Modal} from './Modal'
 import {parseInput} from '../shared/time'
-export function DateTimeField({label,value,onChange,required=false,className=''}:{label:string;value:string;onChange:(value:string)=>void;required?:boolean;className?:string}){
+export function DateTimeField({label,value,onChange,required=false,className='',disabled=false}:{label:string;value:string;onChange:(value:string)=>void;required?:boolean;className?:string;disabled?:boolean}){
  const id=useId(),[open,setOpen]=useState(false)
- return <div className={`date-time-field ${className}`}><label htmlFor={id}>{label}</label><div className="date-input"><input id={id} readOnly required={required} value={value.replace('T',' ')} placeholder="请选择日期与时间" aria-haspopup="dialog" onClick={()=>setOpen(true)} onKeyDown={e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();setOpen(true)}}}/><button type="button" aria-label={'选择'+label} onClick={()=>setOpen(true)}>选择</button></div>{open&&createPortal(<DateTimePanel value={value} optional={!required} onCancel={()=>setOpen(false)} onConfirm={v=>{onChange(v);setOpen(false)}}/>,document.body)}</div>
+ return <div className={`date-time-field ${className}`}><label htmlFor={id}>{label}</label><div className="date-input"><input id={id} disabled={disabled} readOnly required={required} value={value.replace('T',' ')} placeholder="请选择日期与时间" aria-haspopup="dialog" onClick={()=>{if(!disabled)setOpen(true)}} onKeyDown={e=>{if(!disabled&&(e.key==='Enter'||e.key===' ')){e.preventDefault();setOpen(true)}}}/><button type="button" disabled={disabled} aria-label={'选择'+label} onClick={()=>setOpen(true)}>选择</button></div>{open&&!disabled&&createPortal(<DateTimePanel value={value} optional={!required} onCancel={()=>setOpen(false)} onConfirm={v=>{onChange(v);setOpen(false)}}/>,document.body)}</div>
 }
 function DateTimePanel({value,optional,onConfirm,onCancel}:{value:string;optional:boolean;onConfirm:(value:string)=>void;onCancel:()=>void}){
  const initial=DateTime.fromISO(value||DateTime.now().toFormat("yyyy-MM-dd'T'HH:mm"))
