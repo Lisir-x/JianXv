@@ -8,7 +8,7 @@ export interface Task {
   seriesId?:string;index?:number
 }
 export interface Segment {from:number;until:number|null;period:number;base:Task;zone:string}
-export interface Series {id:string;createdAt:number;segments:Segment[];firstId?:string}
+export interface Series {id:string;createdAt:number;segments:Segment[];firstId?:string;currentIndex?:number;currentOnly?:boolean}
 export interface Exception {id:string;seriesId:string;index:number;patch:Partial<Task>;deleted:boolean}
 export interface Notice {id:string;taskId:string;scheduledAt:number;recordedAt:number;missed:boolean;read:boolean;name:string;kind:Kind;cat:string;system:'not-requested'|'submitted'|'failed'}
 export interface Settings {notification:boolean;startup:boolean;trayExplained:boolean;lastBackup:number|null;lastScan?:number|null}

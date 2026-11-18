@@ -17,6 +17,12 @@ export function validateInput(raw:TaskInput,groups:Group[]):TaskInput {
  if(raw.period>0)addDays(raw.start!,raw.period,raw.zone)
  return {...raw,name:raw.name.trim(),desc:String(raw.desc??''),reward:String(raw.reward??''),start:raw.kind==='study'?null:raw.start}
 }
+export function periodicInput(raw:TaskInput):TaskInput {
+ if(raw.kind!=='game'||!raw.period)return raw
+ if(!Number.isInteger(raw.period)||raw.period<=0)throw Error('周期必须为正整数天')
+ if(raw.start===null||!Number.isFinite(raw.start))throw Error('请填写开始时间')
+ return {...raw,end:addDays(raw.start,raw.period,raw.zone)}
+}
 export function sortTasks(tasks:Task[],filter:Status|'all'='pending'){
  return tasks.sort((a,b)=>(filter==='done'?(b.doneAt??0)-(a.doneAt??0):filter==='overdue'?b.end-a.end:a.end-b.end)||a.createdAt-b.createdAt||a.id.localeCompare(b.id))
 }
