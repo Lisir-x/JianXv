@@ -1,0 +1,12 @@
+const fs=require('node:fs')
+const path=require('node:path')
+const file=path.join(__dirname,'..','开发计划.md')
+const [stage,status,...evidence]=process.argv.slice(2)
+if(!stage||!status)throw Error('用法 node scripts/stage.cjs 阶段号 状态 测试证据')
+let text=fs.readFileSync(file,'utf8')
+const lines=text.split('\n')
+const index=lines.findIndex(line=>line.startsWith(`| ${stage} `))
+if(index<0)throw Error('未找到阶段')
+lines[index]=lines[index].replace(/\| [^|]+ \|$/,`| ${status} |`)
+text=lines.join('\n')+`\n- 阶段 ${stage}：${status}。${evidence.join(' ')}\n`
+fs.writeFileSync(file,text)

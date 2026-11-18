@@ -1,0 +1,113 @@
+import { app,BrowserWindow,Tray,Menu,nativeImage,Notification,ipcMain,powerMonitor,dialog } from 'electron'
+import { join } from 'node:path'
+import { mkdirSync,writeFileSync } from 'node:fs'
+import { Store } from './store'
+import { Service } from './service'
+import { Scheduler } from './scheduler'
+import { Recovery } from './recovery'
+import { restoreDamagedDatabase } from './startup'
+import type { TaskInput,Notice } from '../shared/types'
+const test=process.env.TODO_TEST==='1'
+if(process.env.TODO_DATA_DIR)app.setPath('userData',process.env.TODO_DATA_DIR)
+else app.setPath('userData',join(app.getPath('appData'),'PersonalTodo',app.isPackaged?'data-user':'development'))
+app.setName('我的待办')
+app.setAppUserModelId('local.personal.todo')
+let win:BrowserWindow|null=null,tray:Tray|null=null,quitting=false
+if(!app.requestSingleInstanceLock())app.quit()
+else {
+  app.on('second-instance',()=>{win?.show();win?.focus()})
+  app.whenReady().then(async()=>{
+    mkdirSync(join(app.getPath('userData'),'data'),{recursive:true})
+    const dataPath=join(app.getPath('userData'),'data','app.sqlite')
+    let db:Store
+    while(true){try{db=new Store(dataPath);break}catch(e){
+      const choice=await dialog.showMessageBox({type:'error',title:'本地数据无法打开',message:'原文件已保留，可选择备份恢复。',detail:dataPath+'\n'+(e as Error).message,buttons:['选择备份恢复','退出应用'],defaultId:1,cancelId:1})
+      if(choice.response!==0){app.quit();return}
+      const file=await dialog.showOpenDialog({title:'选择恢复备份',properties:['openFile'],filters:[{name:'SQLite备份',extensions:['sqlite']}]})
+      if(file.canceled)continue
+      try{const preserved=restoreDamagedDatabase(dataPath,file.filePaths[0]);await dialog.showMessageBox({type:'info',message:'备份已恢复',detail:'原数据文件保留于：'+preserved})}catch(error){await dialog.showMessageBox({type:'error',message:'恢复失败，原数据仍保留',detail:(error as Error).message})}
+    }}
+    let testNow=test&&process.env.TODO_NOW?Number(process.env.TODO_NOW):null
+    const service=new Service(db,()=>testNow??Date.now())
+    const recovery=new Recovery(db,()=>service.now())
+    let importing=false
+    let notificationShows=0,notificationFailures=0
+    const liveNotifications=new Set<Notification>()
+    const notifyChanged=(event:object={})=>win?.webContents.send('todo:changed',event)
+    const show=()=>{if(win?.isMinimized())win.restore();win?.show();win?.focus()}
+    const scheduler=new Scheduler(service,(notice:Notice)=>{
+      if(!Notification.isSupported())throw Error('此系统不支持通知')
+      const n=new Notification({title:notice.kind==='study'?'待办提醒':'游戏活动提醒',body:notice.name+' · '+service.groupName(notice.cat),silent:false})
+      liveNotifications.add(n);n.on('show',()=>{notificationShows++});n.on('failed',(_e,error)=>{notificationFailures++;db.mutate(s=>{const row=s.notices.find(x=>x.id===notice.id);if(row)row.system='failed'});notifyChanged({error:'Windows 未显示通知：'+error})});n.on('close',()=>liveNotifications.delete(n));n.on('click',()=>{show();notifyChanged({taskId:notice.taskId})});n.show()
+    },notifyChanged)
+    const scan=(mode:'live'|'missed'='live')=>{try{scheduler.scan(mode)}catch(e){notifyChanged({error:'提醒检查失败：'+(e as Error).message})}}
+    const startupArgs=app.isPackaged?['--background']:[app.getAppPath(),'--background']
+    const startupActual=()=>app.getLoginItemSettings({path:app.getPath('exe'),args:startupArgs}).openAtLogin
+    const setStartup=(enabled:boolean)=>{app.setLoginItemSettings({openAtLogin:enabled,path:app.getPath('exe'),args:startupArgs});if(startupActual()!==enabled)throw Error('开机自启登记失败，请检查系统启动应用设置')}
+    const timer:{current?:ReturnType<typeof setInterval>}={}
+    app.on('will-quit',()=>{if(timer.current)clearInterval(timer.current);recovery.cancel();liveNotifications.forEach(n=>n.close());tray?.destroy();db.close()})
+    win=new BrowserWindow({width:1160,height:820,minWidth:720,minHeight:600,show:!test&&!process.argv.includes('--background'),backgroundColor:'#f7f8fa',icon:join(app.getAppPath(),'assets','icon.png'),webPreferences:{preload:join(__dirname,'../preload/index.js'),contextIsolation:true,nodeIntegration:false,sandbox:true,backgroundThrottling:!test}})
+    win.webContents.setWindowOpenHandler(()=>({action:'deny'}))
+    win.webContents.on('will-navigate',e=>e.preventDefault())
+    win.on('close',e=>{if(!quitting){e.preventDefault();win?.hide();if(!db.read().settings.trayExplained){if(!test)tray?.displayBalloon({title:'我的待办已在后台运行',content:'仍会按时提醒。通过托盘菜单可以打开窗口或退出应用。'});db.mutate(s=>{s.settings.trayExplained=true})}}})
+    const image=nativeImage.createFromPath(join(app.getAppPath(),'assets','tray.png'))
+    tray=new Tray(image);tray.setToolTip('我的待办')
+    tray.setContextMenu(Menu.buildFromTemplate([{label:'打开主窗口',click:show},{label:'退出应用',click:()=>{quitting=true;app.quit()}}]));tray.on('double-click',show)
+    ipcMain.handle('todo:call',async(event,action,payload:any={})=>{
+      if(event.sender!==win?.webContents)return {ok:false,error:'非法调用来源'}
+      try{
+        if((recovery.busy||importing)&&!['snapshot','health','detail','groupCounts','cancelImport','commitImport'].includes(action))throw Error('备份恢复正在进行，请先完成或取消')
+        let data:unknown
+        switch(action){
+          case 'health':data={groups:db.read().groups.length,tray:!!tray,notifications:Notification.isSupported(),path:db.path,notificationShows,notificationFailures,visible:win?.isVisible()};break
+          case 'snapshot':data={...service.snapshot(Math.min(Math.max(Number(payload.limit)||100,1),10000),{kind:payload.kind,cat:payload.cat,filter:payload.filter}),notificationSupported:Notification.isSupported(),startupActual:startupActual()};break
+          case 'detail':data=service.task(payload.id);break
+          case 'addGroup':data=service.addGroup(payload.kind,payload.name);break
+          case 'renameGroup':data=service.renameGroup(payload.id,payload.name);break
+          case 'groupCounts':data=service.groupCounts(payload.id);break
+          case 'deleteGroup':data=service.deleteGroup(payload.id);break
+          case 'save':data=service.save(payload.input as TaskInput,payload.id,payload.scope);break
+          case 'complete':data=service.complete(payload.id,payload.done);break
+          case 'delete':data=service.delete(payload.id,payload.scope);break
+          case 'readNotices':data=service.readNotices();break
+          case 'setSettings':{
+            if(typeof payload.notification==='boolean')db.mutate(s=>{s.settings.notification=payload.notification})
+            if(typeof payload.startup==='boolean'){setStartup(payload.startup);db.mutate(s=>{s.settings.startup=startupActual()})}
+            data=db.read().settings;break
+          }
+          case 'export':{
+            const choice=test&&payload.path?{canceled:false,filePath:String(payload.path)}:await dialog.showSaveDialog(win!,{title:'导出备份',defaultPath:`待办备份-${new Date().toISOString().replace(/[:.]/g,'-')}.sqlite`,filters:[{name:'SQLite 备份',extensions:['sqlite']}]})
+            if(choice.canceled||!choice.filePath){data=null;break}data=await recovery.export(choice.filePath);break
+          }
+          case 'prepareImport':{
+            const choice=test&&payload.path?{canceled:false,filePaths:[String(payload.path)]}:await dialog.showOpenDialog(win!,{title:'选择备份',properties:['openFile'],filters:[{name:'SQLite 备份',extensions:['sqlite']}]})
+            if(choice.canceled||!choice.filePaths[0]){data=null;break}
+            scheduler.paused=true
+            try{data=await recovery.prepare(choice.filePaths[0]);importing=true}catch(e){scheduler.paused=false;throw e}break
+          }
+          case 'cancelImport':recovery.cancel();importing=false;scheduler.paused=false;scan('missed');break
+          case 'commitImport':{
+            if(!importing)throw Error('没有有效的导入预览')
+            recovery.commit(payload.token);importing=false;scheduler.reset();scheduler.paused=false
+            try{setStartup(db.read().settings.startup)}catch(e){db.mutate(s=>{s.settings.startup=startupActual()});notifyChanged({error:(e as Error).message})}
+            scan('missed');data=true;break
+          }
+          case 'clear':scheduler.paused=true;try{recovery.clear(payload.word);scheduler.reset();data=true}finally{scheduler.paused=false}break
+          case 'testAdvance':if(!test)throw Error('不支持的操作');testNow=(testNow??Date.now())+Number(payload.ms);scan(payload.missed?'missed':'live');data=service.snapshot();break
+          case 'openWindow':show();break
+          case 'quit':quitting=true;setImmediate(()=>app.quit());break
+          default:throw Error('不支持的操作')
+        }
+        if(!['snapshot','health','detail','groupCounts'].includes(action)){if(!['quit','openWindow'].includes(action))scan();notifyChanged()}
+        return {ok:true,data}
+      }catch(e){return {ok:false,error:e instanceof Error?e.message:String(e)}}
+    })
+    if(process.env.ELECTRON_RENDERER_URL)await win.loadURL(process.env.ELECTRON_RENDERER_URL)
+    else await win.loadFile(join(__dirname,'../renderer/index.html'))
+    scan('missed')
+    powerMonitor.on('resume',()=>{scan('missed');notifyChanged()})
+    timer.current=setInterval(()=>{scan();notifyChanged()},15000)
+    if(process.env.TODO_SMOKE_RESULT){writeFileSync(process.env.TODO_SMOKE_RESULT,JSON.stringify({groups:db.read().groups.length,tray:!!tray,notifications:Notification.isSupported()}));quitting=true;app.quit()}
+  })
+  app.on('before-quit',()=>{quitting=true})
+}
