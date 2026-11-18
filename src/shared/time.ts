@@ -9,9 +9,9 @@ export function formatTime(time:number|null){return time===null?'未设置':Date
 export function validateInput(raw:TaskInput,groups:Group[]):TaskInput {
  if(!raw||typeof raw.name!=='string'||!raw.name.trim())throw Error('请填写名称')
  if(!['study','game'].includes(raw.kind)||!groups.some(g=>g.id===raw.cat&&g.kind===raw.kind))throw Error('请选择有效的所属分类或游戏')
- if(!Number.isFinite(raw.end)||!DateTime.fromMillis(raw.end).isValid)throw Error('请填写有效的截止 / 结束时间')
+ if(!Number.isFinite(raw.end)||!DateTime.fromMillis(raw.end).isValid)throw Error('请填写有效的结束时间')
  if(raw.kind==='game'&&(!Number.isFinite(raw.start)||!DateTime.fromMillis(raw.start!).isValid||raw.start!>=raw.end))throw Error('结束时间必须晚于开始时间')
- if(raw.remind!==null&&(!Number.isFinite(raw.remind)||!DateTime.fromMillis(raw.remind).isValid||raw.remind>raw.end))throw Error('提醒时间不能晚于截止 / 结束时间')
+ if(raw.remind!==null&&(!Number.isFinite(raw.remind)||!DateTime.fromMillis(raw.remind).isValid||raw.remind>raw.end))throw Error('提醒时间不能晚于结束时间')
  if(!Number.isInteger(raw.period)||raw.period<0||(raw.kind==='study'&&raw.period!==0))throw Error('周期必须为正整数天或不重复')
  if(!DateTime.now().setZone(raw.zone).isValid)throw Error('时间区域无效')
  if(raw.period>0)addDays(raw.start!,raw.period,raw.zone)
