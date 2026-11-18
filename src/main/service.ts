@@ -4,9 +4,11 @@ import { localZone,stateOf,sortTasks,validateInput,periodicInput,addDays } from 
 import { Store } from './store'
 import { occurrence,segmentFor,currentIndex,currentActivity } from '../shared/recurrence'
 import {validateGameVersion} from '../shared/game-version'
+import {gameCalendar} from '../shared/game-calendar'
 export class Service {
  constructor(readonly store:Store,public clock:()=>number=()=>Date.now()){}
  now(){return this.clock()}
+ calendar(cat='',limit=500){return gameCalendar(this.store.read(),this.now(),cat,limit)}
  addGroup(kind:Kind,name:string,version?:GameVersion){return this.store.mutate(s=>{name=name?.trim();if(!['study','game'].includes(kind)||!name)throw Error('请填写名称');if(s.groups.some(g=>g.kind===kind&&g.name===name))throw Error('同一模块已存在该名称');if(version&&kind!=='game')throw Error('学习分类不能包含游戏版本');const g:Group={id:randomUUID(),kind,name,createdAt:this.now(),updatedAt:this.now(),...(version?{version:validateGameVersion(version)}:{})};s.groups.push(g);return g})}
  updateGame(id:string,name:string,version:GameVersion){return this.store.mutate(s=>{const g=s.groups.find(g=>g.id===id&&g.kind==='game');if(!g)throw Error('游戏不存在');name=name?.trim();if(!name)throw Error('请填写名称');if(s.groups.some(x=>x.id!==id&&x.kind==='game'&&x.name===name))throw Error('同一模块已存在该名称');const checked=validateGameVersion(version);g.name=name;g.version=checked;g.updatedAt=this.now();return g})}
  renameGroup(id:string,name:string){return this.store.mutate(s=>{const g=s.groups.find(g=>g.id===id);if(!g)throw Error('子模块不存在');name=name?.trim();if(!name)throw Error('请填写名称');if(s.groups.some(x=>x.id!==id&&x.kind===g.kind&&x.name===name))throw Error('同一模块已存在该名称');g.name=name;g.updatedAt=this.now()})}

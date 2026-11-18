@@ -71,6 +71,7 @@ else {
           case 'health':data={groups:db.read().groups.length,tray:!!tray,notifications:Notification.isSupported(),path:db.path,notificationShows,notificationFailures,visible:win?.isVisible()};break
           case 'snapshot':data={...service.snapshot(Math.min(Math.max(Number(payload.limit)||100,1),10000),{kind:payload.kind,cat:payload.cat,filter:payload.filter}),notificationSupported:Notification.isSupported(),startupActual:startupActual()};break
           case 'detail':data=service.task(payload.id);break
+          case 'calendar':data=service.calendar(typeof payload.cat==='string'?payload.cat:'',Number(payload.limit)||500);break
           case 'addGroup':data=service.addGroup(payload.kind,payload.name,payload.version);break
           case 'updateGame':data=service.updateGame(payload.id,payload.name,payload.version);break
           case 'renameGroup':data=service.renameGroup(payload.id,payload.name);break
@@ -114,7 +115,7 @@ else {
           case 'quit':quitting=true;setImmediate(()=>app.quit());break
           default:throw Error('不支持的操作')
         }
-        if(!['snapshot','health','detail','groupCounts'].includes(action)){if(!['quit','openWindow'].includes(action))scan();notifyChanged()}
+        if(!['snapshot','health','detail','groupCounts','calendar'].includes(action)){if(!['quit','openWindow'].includes(action))scan();notifyChanged()}
         return {ok:true,data}
       }catch(e){return {ok:false,error:e instanceof Error?e.message:String(e)}}
     })
