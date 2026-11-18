@@ -21,9 +21,9 @@ export function GameCalendar({cat,revision,onOpen,onManage}:{cat:string;revision
   {axis&&<div className="calendar-horizontal" ref={horizontal} aria-label="活动日历横向日期轴" tabIndex={0}>
    <div className="calendar-sheet" style={{'--timeline-width':axis.width+'px'} as React.CSSProperties}>
     <div className="calendar-date-header calendar-grid-row"><div className="calendar-name-head">活动 / 版本</div><div className="calendar-date-track">{axis.ticks.map(tick=><span className="calendar-date" key={tick.time} style={{left:calendarPosition(tick.time,axis)+'%'}}>{tick.label}</span>)}{inRange&&<span className="calendar-today-label" style={{left:current+'%'}}>今天</span>}</div></div>
-    {data.games.filter(g=>g.group.version).map(({group,events,hasMore})=>{
+    {data.games.filter(g=>g.group.version).map(({group,events,hasMore,hue})=>{
      const version=group.version!
-     return <section key={group.id} className="calendar-game" aria-label={group.name+'活动日历'} data-game-id={group.id}>
+     return <section key={group.id} className="calendar-game" style={{'--game-color':`hsl(${hue} 46% 32%)`,'--game-soft':`hsl(${hue} 40% 96%)`,'--game-edge':`hsl(${hue} 25% 70%)`} as React.CSSProperties} aria-label={group.name+'活动日历'} data-game-id={group.id}>
       <header className="calendar-game-heading"><h3 className="calendar-game-tab">{group.name}</h3><span>版本 {version.number} · {formatTime(version.start)} — {formatTime(version.end)}</span><button className="quiet" onClick={()=>onManage(group)}>管理版本</button></header>
       <div className="calendar-lanes"><div className="calendar-guides" aria-hidden="true">{axis.ticks.map(tick=><span className="calendar-guide" key={tick.time} style={{left:calendarPosition(tick.time,axis)+'%'}}/>)}{inRange&&<span className="calendar-today-line" style={{left:current+'%'}}/>}</div>
        {events.map(event=>{const t=event.task,span=calendarSpan(t,version,axis),status=stateOf(t,data.now),title=`${t.name}\n${formatTime(t.start)} — ${formatTime(t.end)}${event.preview?'\n未来期次预览':status==='done'?'\n已完成':''}`;return <div className="calendar-event-row calendar-grid-row" key={t.id} data-event-id={t.id} data-preview={event.preview}>

@@ -29,11 +29,13 @@ function recurringEvents(state:State,group:Group,now:number,limit:number):Calend
 }
 export function gameCalendar(state:State,now:number,cat='',requestedLimit=500):GameCalendarData{
  const limit=Math.min(10000,Math.max(1,Math.floor(requestedLimit)||500))
- return {now,games:state.groups.filter(g=>g.kind==='game'&&(!cat||g.id===cat)).map(group=>{
-  if(!group.version)return {group,events:[],hasMore:false}
+ const allGames=state.groups.filter(g=>g.kind==='game')
+ return {now,games:allGames.filter(g=>!cat||g.id===cat).map(group=>{
+  const hue=(153+allGames.findIndex(g=>g.id===group.id)*137.508)%360
+  if(!group.version)return {group,events:[],hasMore:false,hue}
   const events:CalendarEvent[]=[...state.items.filter(t=>t.kind==='game'&&t.cat===group.id&&overlapsVersion(t,group.version!)).map(task=>({task,preview:false,sourceId:task.id})),...recurringEvents(state,group,now,limit)]
   events.sort((a,b)=>a.task.start!-b.task.start!||a.task.end-b.task.end||a.task.createdAt-b.task.createdAt||a.task.id.localeCompare(b.task.id))
-  return {group,events:events.slice(0,limit),hasMore:events.length>limit}
+  return {group,events:events.slice(0,limit),hasMore:events.length>limit,hue}
  })}
 }
 export interface CalendarAxis {start:number;end:number;width:number;ticks:{time:number;label:string}[]}
