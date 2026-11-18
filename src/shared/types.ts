@@ -14,6 +14,6 @@ export interface Notice {id:string;taskId:string;scheduledAt:number;recordedAt:n
 export interface Settings {notification:boolean;startup:boolean;trayExplained:boolean;lastBackup:number|null;lastScan?:number|null}
 export interface State {groups:Group[];items:Task[];series:Series[];exceptions:Exception[];notices:Notice[];settings:Settings}
 export interface TaskInput {name:string;kind:Kind;cat:string;start:number|null;end:number;remind:number|null;desc:string;reward:string;period:number;zone:string}
-export interface Snapshot {groups:Group[];tasks:Task[];recent:Task[];next:Task|null;overdue:Task[];overdueTotal:number;notices:Notice[];settings:Settings;now:number;path:string;hasMore:boolean;notificationSupported:boolean;startupActual:boolean}
+export interface Snapshot {counts:Record<Status|'all',number>;groups:Group[];tasks:Task[];recent:Task[];next:Task|null;overdue:Task[];overdueTotal:number;notices:Notice[];settings:Settings;now:number;path:string;hasMore:boolean;notificationSupported:boolean;startupActual:boolean}
 export interface Result<T=unknown> {ok:boolean;data?:T;error?:string}
 export interface TodoBridge {call:<T=unknown>(action:string,payload?:unknown)=>Promise<Result<T>>;subscribe:(listener:(event:{taskId?:string;error?:string})=>void)=>()=>void}
