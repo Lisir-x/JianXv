@@ -17,7 +17,13 @@ export class Service {
  })}
  rollCycles(){const s=this.store.read();let changed=false
   for(const series of s.series){if(!series.currentOnly){for(const seg of series.segments){if(seg.period){const lead=seg.base.remind===null?null:seg.base.end-seg.base.remind;seg.base.end=addDays(seg.base.start!,seg.period,seg.zone);seg.base.remind=lead===null?null:seg.base.end-lead}}series.currentOnly=true;changed=true}
-   const index=currentIndex(series,this.now());if(series.currentIndex!==index){series.currentIndex=index;changed=true}
+   const cursor=series.currentIndex??series.segments[0].from,rule=segmentFor(series,cursor),raw=occurrence(series,cursor,{...s,exceptions:[]}),actual=occurrence(series,cursor,s)
+   let hold=false
+   if(rule?.period&&raw&&actual&&actual.start!==raw.start){
+    if(actual.end>this.now())hold=true
+    else{const start=actual.end,end=addDays(start,rule.period,rule.zone),lead=rule.base.remind===null?null:rule.base.end-rule.base.remind;series.segments=series.segments.filter(seg=>seg.from<=cursor).map(seg=>({...seg,until:Math.min(seg.until??Infinity,cursor+1)}));series.segments.push({from:cursor+1,until:null,period:rule.period,zone:rule.zone,base:{...rule.base,start,end,remind:lead===null?null:end-lead,doneAt:null}});changed=true}
+   }
+   const index=hold?cursor:currentIndex(series,this.now());if(series.currentIndex!==index){series.currentIndex=index;changed=true}
    if(index>series.segments[0].from){const active=segmentFor(series,index);if(active){const base=occurrence(series,index,{...s,exceptions:[]})!;series.segments=series.segments.filter(seg=>seg.from>=index);if(!series.segments.some(seg=>seg.from===index))series.segments.unshift({...active,from:index,base:{...base,doneAt:null}});series.firstId=undefined;changed=true}}
    const before=s.exceptions.length;s.exceptions=s.exceptions.filter(ex=>ex.seriesId!==series.id||ex.index>=index);if(before!==s.exceptions.length)changed=true
   }

@@ -18,6 +18,7 @@ export function App(){
  const [groupModal,setGroupModal]=useState<{kind:Kind;group?:Group}|null>(null),[notices,setNotices]=useState(false)
  const refresh=useCallback(async()=>{try{setData(await call<Snapshot>('snapshot',{limit,kind:page==='study'||page==='game'?page:undefined,cat,filter:page==='study'||page==='game'?filter:'all'}))}catch(e){setError((e as Error).message)}},[limit,page,cat,filter])
  useEffect(()=>{void refresh();const unsubscribe=window.todo.subscribe(event=>{if(event.error)setError(event.error);if(event.taskId)void call<Task|undefined>('detail',{id:event.taskId}).then(t=>{if(t)setDetail(t);else setToast('该事项已删除')});void refresh()});const timer=setInterval(()=>void refresh(),15000);return ()=>{unsubscribe();clearInterval(timer)}},[refresh])
+ useEffect(()=>{if(!detail||!data)return;let active=true;void call<Task|undefined>('detail',{id:detail.id}).then(current=>{if(active)setDetail(current??null)}).catch(e=>{if(active)setError((e as Error).message)});return ()=>{active=false}},[data,detail?.id])
  const route=(p:Page,c='')=>{setPage(p);setCat(c);setLimit(100);setToast('');setUndo(null);setMovedTo(null)}
  const changed=async(message:string)=>{await refresh();if(detail){const t=await call<Task|undefined>('detail',{id:detail.id});setDetail(previous=>previous?.id===detail.id?t??null:previous)}setToast(message)}
  const complete=async(t:Task)=>{setUndo(t);await call('complete',{id:t.id,done:t.doneAt===null});await changed(t.doneAt===null?'已完成':'已取消完成')}

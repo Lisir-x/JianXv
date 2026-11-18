@@ -18,4 +18,4 @@ export function currentIndex(series:Series,now:number){
  for(const seg of series.segments){if(seg.base.start!>now&&seg.from>index)continue;let candidate=seg.period?estimate(seg,now):seg.from;candidate=Math.min(candidate,seg.until===null?candidate:seg.until-1);if(candidate<seg.from)continue;index=Math.max(index,candidate)}
  return index
 }
-export function currentActivity(series:Series,state:State,now:number){return occurrence(series,currentIndex(series,now),state)}
+export function currentActivity(series:Series,state:State,now:number){const cursor=series.currentIndex??series.segments[0].from,actual=occurrence(series,cursor,state),raw=occurrence(series,cursor,{...state,exceptions:[]});if(actual&&raw&&actual.start!==raw.start&&actual.end>now)return actual;return occurrence(series,currentIndex(series,now),state)}

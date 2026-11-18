@@ -65,6 +65,7 @@ else {
       if(event.sender!==win?.webContents)return {ok:false,error:'非法调用来源'}
       try{
         if((recovery.busy||importing)&&!['snapshot','health','detail','groupCounts','cancelImport','commitImport'].includes(action))throw Error('备份恢复正在进行，请先完成或取消')
+        if(action==='snapshot'&&!importing&&!recovery.busy)scan()
         let data:unknown
         switch(action){
           case 'health':data={groups:db.read().groups.length,tray:!!tray,notifications:Notification.isSupported(),path:db.path,notificationShows,notificationFailures,visible:win?.isVisible()};break
