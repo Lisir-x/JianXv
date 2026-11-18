@@ -46,6 +46,7 @@
       "signExecutable": false
     },
     "nsis": {
+      "artifactName": "我的待办 Setup.${ext}",
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
