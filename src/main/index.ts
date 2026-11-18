@@ -1,15 +1,18 @@
 import { app,BrowserWindow,Tray,Menu,nativeImage,Notification,ipcMain,powerMonitor,dialog } from 'electron'
-import { join } from 'node:path'
-import { mkdirSync,writeFileSync } from 'node:fs'
+import { join,dirname } from 'node:path'
+import { mkdirSync,writeFileSync,existsSync } from 'node:fs'
 import { Store } from './store'
 import { Service } from './service'
 import { Scheduler } from './scheduler'
 import { Recovery } from './recovery'
 import { restoreDamagedDatabase } from './startup'
+import {dataLocation,copyData,saveLocation} from './location'
 import type { TaskInput,Notice } from '../shared/types'
 const test=process.env.TODO_TEST==='1'
+const locationHome=test&&process.env.TODO_HOME?process.env.TODO_HOME:app.isPackaged?dirname(app.getPath('exe')):app.getAppPath()
+const legacyRoot=join(app.getPath('appData'),'PersonalTodo',app.isPackaged?'data-user':'development')
 if(process.env.TODO_DATA_DIR)app.setPath('userData',process.env.TODO_DATA_DIR)
-else app.setPath('userData',join(app.getPath('appData'),'PersonalTodo',app.isPackaged?'data-user':'development'))
+else app.setPath('userData',dataLocation(locationHome))
 app.setName('我的待办')
 app.setAppUserModelId('local.personal.todo')
 let win:BrowserWindow|null=null,tray:Tray|null=null,quitting=false
@@ -17,6 +20,11 @@ if(!app.requestSingleInstanceLock())app.quit()
 else {
   app.on('second-instance',()=>{win?.show();win?.focus()})
   app.whenReady().then(async()=>{
+    const legacyDb=join(legacyRoot,'data','app.sqlite')
+    if(!test&&!process.env.TODO_DATA_DIR&&!existsSync(join(app.getPath('userData'),'data','app.sqlite'))&&existsSync(legacyDb)){
+      const choice=await dialog.showMessageBox({type:'question',message:'发现旧版数据，是否复制到新的数据目录？',detail:'原数据会保留：'+legacyDb,buttons:['复制旧数据','暂不迁移'],defaultId:0,cancelId:1})
+      if(choice.response===0){const old=new Store(legacyDb);try{mkdirSync(join(app.getPath('userData'),'data'),{recursive:true});await old.backup(join(app.getPath('userData'),'data','app.sqlite'))}finally{old.close()}}
+    }
     mkdirSync(join(app.getPath('userData'),'data'),{recursive:true})
     const dataPath=join(app.getPath('userData'),'data','app.sqlite')
     let db:Store
@@ -74,6 +82,12 @@ else {
             if(typeof payload.notification==='boolean')db.mutate(s=>{s.settings.notification=payload.notification})
             if(typeof payload.startup==='boolean'){setStartup(payload.startup);db.mutate(s=>{s.settings.startup=startupActual()})}
             data=db.read().settings;break
+          }
+          case 'moveData':{
+            const choice=test&&payload.path?{canceled:false,filePaths:[String(payload.path)]}:await dialog.showOpenDialog(win!,{title:'选择空的数据目录',properties:['openDirectory','createDirectory']})
+            if(choice.canceled){data=null;break}
+            scheduler.paused=true;importing=true
+            try{const target=await copyData(db,choice.filePaths[0]);saveLocation(locationHome,target);data=target;if(!test){app.relaunch();quitting=true;setTimeout(()=>app.quit(),100)}}catch(e){importing=false;scheduler.paused=false;throw e}break
           }
           case 'export':{
             const choice=test&&payload.path?{canceled:false,filePath:String(payload.path)}:await dialog.showSaveDialog(win!,{title:'导出备份',defaultPath:`待办备份-${new Date().toISOString().replace(/[:.]/g,'-')}.sqlite`,filters:[{name:'SQLite 备份',extensions:['sqlite']}]})

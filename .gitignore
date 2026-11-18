@@ -6,3 +6,5 @@ playwright-report/
 .test-data/
 *.log
 .npm-cache/
+我的待办数据/
+todo-location.json
