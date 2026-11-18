@@ -71,7 +71,8 @@ else {
           case 'health':data={groups:db.read().groups.length,tray:!!tray,notifications:Notification.isSupported(),path:db.path,notificationShows,notificationFailures,visible:win?.isVisible()};break
           case 'snapshot':data={...service.snapshot(Math.min(Math.max(Number(payload.limit)||100,1),10000),{kind:payload.kind,cat:payload.cat,filter:payload.filter}),notificationSupported:Notification.isSupported(),startupActual:startupActual()};break
           case 'detail':data=service.task(payload.id);break
-          case 'addGroup':data=service.addGroup(payload.kind,payload.name);break
+          case 'addGroup':data=service.addGroup(payload.kind,payload.name,payload.version);break
+          case 'updateGame':data=service.updateGame(payload.id,payload.name,payload.version);break
           case 'renameGroup':data=service.renameGroup(payload.id,payload.name);break
           case 'groupCounts':data=service.groupCounts(payload.id);break
           case 'deleteGroup':data=service.deleteGroup(payload.id);break

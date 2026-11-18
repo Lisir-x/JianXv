@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto'
 import type { State } from '../shared/types'
 import { validateInput } from '../shared/time'
 import { occurrence } from '../shared/recurrence'
+import {validateGameVersion} from '../shared/game-version'
 export const APP_ID='local.personal.todo'
 export const SCHEMA=1
 export function initialState(now=Date.now()):State {
@@ -14,6 +15,7 @@ export function validateState(s:State){
   if(!s||!['groups','items','series','exceptions','notices'].every(k=>Array.isArray((s as any)[k]))||typeof s.settings?.notification!=='boolean'||typeof s.settings?.startup!=='boolean')throw Error('数据结构不完整')
   const ids=new Set<string>(),names=new Set<string>()
   for(const g of s.groups){if(typeof g.id!=='string'||!g.id||!['study','game'].includes(g.kind)||typeof g.name!=='string'||!g.name.trim()||!Number.isFinite(g.createdAt)||!Number.isFinite(g.updatedAt)||ids.has(g.id)||names.has(g.kind+':'+g.name.trim()))throw Error('分类数据无效或重复');ids.add(g.id);names.add(g.kind+':'+g.name.trim())}
+  for(const g of s.groups)if(g.version!==undefined){if(g.kind!=='game')throw Error('学习分类不能包含游戏版本');validateGameVersion(g.version)}
   const validateTask=(t:any)=>{if(!t||typeof t.id!=='string'||typeof t.name!=='string'||typeof t.desc!=='string'||typeof t.reward!=='string'||!Number.isFinite(t.createdAt)||!Number.isFinite(t.updatedAt)||(t.doneAt!==null&&!Number.isFinite(t.doneAt)))throw Error('事项字段或归属关系无效');validateInput(t,s.groups)}
   const taskIds=new Set<string>();for(const t of s.items){validateTask(t);if(taskIds.has(t.id))throw Error('事项标识重复');taskIds.add(t.id)}
   const seriesIds=new Set<string>();for(const series of s.series){if(!series.id||seriesIds.has(series.id)||!series.segments.length)throw Error('周期系列无效');seriesIds.add(series.id);let end=0;for(const seg of series.segments){validateTask(seg.base);if(!Number.isInteger(seg.from)||seg.from<end||!Number.isInteger(seg.period)||seg.period<0||(seg.until!==null&&(!Number.isInteger(seg.until)||seg.until<=seg.from)))throw Error('周期规则范围无效');end=seg.until??Infinity}}

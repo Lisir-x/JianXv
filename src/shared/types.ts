@@ -1,7 +1,8 @@
 export type Kind='study'|'game'
 export type Status='pending'|'overdue'|'done'
 export type Scope='one'|'future'
-export interface Group {id:string;kind:Kind;name:string;createdAt:number;updatedAt:number}
+export interface GameVersion {number:string;start:number;end:number}
+export interface Group {id:string;kind:Kind;name:string;createdAt:number;updatedAt:number;version?:GameVersion}
 export interface Task {
   id:string;kind:Kind;cat:string;name:string;start:number|null;end:number;remind:number|null;
   desc:string;reward:string;period:number;zone:string;createdAt:number;updatedAt:number;doneAt:number|null;
