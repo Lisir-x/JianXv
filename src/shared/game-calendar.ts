@@ -39,10 +39,10 @@ export function gameCalendar(state:State,now:number,cat='',requestedLimit=500):G
  })}
 }
 export interface CalendarAxis {start:number;end:number;width:number;ticks:{time:number;label:string}[]}
-export function calendarAxis(versions:GameVersion[],zone:string):CalendarAxis|null{
+export function calendarAxis(versions:GameVersion[],zone:string,pixelsPerDay=32):CalendarAxis|null{
  if(!versions.length)return null
  const start=DateTime.fromMillis(Math.min(...versions.map(v=>v.start)),{zone}).startOf('day'),end=DateTime.fromMillis(Math.max(...versions.map(v=>v.end)),{zone}).startOf('day').plus({days:1}),days=end.diff(start,'days').days
- const step=days<=120?1:Math.ceil(days/120),width=Math.min(12000,Math.max(720,days*32)),ticks=[]
+ const step=days<=120?1:Math.ceil(days/120),width=Math.min(12000,Math.max(720,days*pixelsPerDay)),ticks=[]
  for(let offset=0;offset<days;offset+=step){const date=start.plus({days:offset});ticks.push({time:date.toMillis(),label:date.toFormat('MM/dd')})}
  return {start:start.toMillis(),end:end.toMillis(),width,ticks}
 }
