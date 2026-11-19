@@ -54,6 +54,7 @@ else {
     const setStartup=(enabled:boolean)=>{app.setLoginItemSettings({openAtLogin:enabled,path:app.getPath('exe'),args:startupArgs});if(startupActual()!==enabled)throw Error('开机自启登记失败，请检查系统启动应用设置')}
     const timer:{current?:ReturnType<typeof setInterval>}={}
     app.on('will-quit',()=>{if(timer.current)clearInterval(timer.current);recovery.cancel();liveNotifications.forEach(n=>n.close());tray?.destroy();db.close()})
+    Menu.setApplicationMenu(null)
     win=new BrowserWindow({width:1160,height:820,minWidth:720,minHeight:600,show:!test&&!process.argv.includes('--background'),backgroundColor:'#f7f8fa',icon:join(app.getAppPath(),'assets','icon.png'),webPreferences:{preload:join(__dirname,'../preload/index.js'),contextIsolation:true,nodeIntegration:false,sandbox:true,backgroundThrottling:!test}})
     win.webContents.setWindowOpenHandler(()=>({action:'deny'}))
     win.webContents.on('will-navigate',e=>e.preventDefault())
