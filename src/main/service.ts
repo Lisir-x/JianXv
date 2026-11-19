@@ -3,13 +3,13 @@ import type { Kind,State,Task,TaskInput,Scope,Snapshot,GameVersion,Group } from 
 import { localZone,stateOf,sortTasks,validateInput,periodicInput,addDays } from '../shared/time'
 import { Store } from './store'
 import { occurrence,segmentFor,currentIndex,currentActivity } from '../shared/recurrence'
-import {validateGameVersion} from '../shared/game-version'
+import {validateGameVersion,renewGameVersion} from '../shared/game-version'
 import {gameCalendar} from '../shared/game-calendar'
 export class Service {
  constructor(readonly store:Store,public clock:()=>number=()=>Date.now()){}
  now(){return this.clock()}
  pinGroup(id:string,pinned:boolean){return this.store.mutate(s=>{if(typeof pinned!=='boolean')throw Error('置顶状态无效');const g=s.groups.find(g=>g.id===id);if(!g)throw Error('子模块不存在');g.pinnedAt=pinned?Math.max(this.now(),...s.groups.filter(x=>x.kind===g.kind).map(x=>(x.pinnedAt??0)+1)):null;g.updatedAt=this.now();return g})}
- calendar(cat='',limit=500){return gameCalendar(this.store.read(),this.now(),cat,limit)}
+ calendar(cat='',limit=500){this.rollCycles();return gameCalendar(this.store.read(),this.now(),cat,limit)}
  addGroup(kind:Kind,name:string,version?:GameVersion){return this.store.mutate(s=>{name=name?.trim();if(!['study','game'].includes(kind)||!name)throw Error('请填写名称');if(s.groups.some(g=>g.kind===kind&&g.name===name))throw Error('同一模块已存在该名称');if(version&&kind!=='game')throw Error('学习分类不能包含游戏版本');const g:Group={id:randomUUID(),kind,name,createdAt:this.now(),updatedAt:this.now(),...(version?{version:validateGameVersion(version)}:{})};s.groups.push(g);return g})}
  updateGame(id:string,name:string,version:GameVersion){return this.store.mutate(s=>{const g=s.groups.find(g=>g.id===id&&g.kind==='game');if(!g)throw Error('游戏不存在');name=name?.trim();if(!name)throw Error('请填写名称');if(s.groups.some(x=>x.id!==id&&x.kind==='game'&&x.name===name))throw Error('同一模块已存在该名称');const checked=validateGameVersion(version);g.name=name;g.version=checked;g.updatedAt=this.now();return g})}
  renameGroup(id:string,name:string){return this.store.mutate(s=>{const g=s.groups.find(g=>g.id===id);if(!g)throw Error('子模块不存在');name=name?.trim();if(!name)throw Error('请填写名称');if(s.groups.some(x=>x.id!==id&&x.kind===g.kind&&x.name===name))throw Error('同一模块已存在该名称');g.name=name;g.updatedAt=this.now()})}
@@ -21,6 +21,7 @@ export class Service {
   s.groups=s.groups.filter(g=>g.id!==id);this.pruneNotices(s)
  })}
  rollCycles(){const s=this.store.read();let changed=false
+  for(const group of s.groups){if(group.version){const next=renewGameVersion(group.version,this.now());if(next!==group.version){group.version=next;group.updatedAt=this.now();changed=true}}}
   for(const series of s.series){if(!series.currentOnly){for(const seg of series.segments){if(seg.period){const lead=seg.base.remind===null?null:seg.base.end-seg.base.remind;seg.base.end=addDays(seg.base.start!,seg.period,seg.zone);seg.base.remind=lead===null?null:seg.base.end-lead}}series.currentOnly=true;changed=true}
    const cursor=series.currentIndex??series.segments[0].from,rule=segmentFor(series,cursor),raw=occurrence(series,cursor,{...s,exceptions:[]}),actual=occurrence(series,cursor,s)
    let hold=false

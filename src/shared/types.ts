@@ -1,7 +1,7 @@
 export type Kind='study'|'game'
 export type Status='pending'|'overdue'|'done'
 export type Scope='one'|'future'
-export interface GameVersion {number:string;start:number;end:number}
+export interface GameVersion {number:string;start:number;end:number;autoRenew?:boolean}
 export interface CalendarEvent {task:Task;preview:boolean;sourceId:string|null}
 export interface CalendarGame {group:Group;events:CalendarEvent[];hasMore:boolean;hue:number}
 export interface GameCalendarData {games:CalendarGame[];now:number}

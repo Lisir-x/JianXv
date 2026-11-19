@@ -1,0 +1,6 @@
+import {test,expect,_electron as electron} from '@playwright/test'
+import {mkdtempSync} from 'node:fs'
+import {tmpdir} from 'node:os'
+import {join} from 'node:path'
+import {groupMenu} from './group-menu-helper'
+test('周期版本开关保存并到期自动更新',async()=>{const now=Date.parse('2026-11-19T12:00:00+08:00'),app=await electron.launch({args:['.'],env:{...process.env,TODO_TEST:'1',TODO_NOW:String(now),TODO_DATA_DIR:mkdtempSync(join(tmpdir(),'todo-auto-version-'))}});try{const page=await app.firstWindow();await page.waitForSelector('nav');await page.getByRole('button',{name:'游戏',exact:true}).click();await page.getByRole('button',{name:'＋ 添加游戏'}).click();await page.getByLabel('名称',{exact:true}).fill('自动游戏');await page.getByLabel('版本号 *').fill('2.4');await page.getByLabel('周期更新').check();await page.getByRole('button',{name:'保存',exact:true}).click();await expect(page.locator('nav').getByRole('button',{name:'自动游戏',exact:true})).toBeVisible();await groupMenu(page,'自动游戏','管理版本');await expect(page.getByLabel('周期更新')).toBeChecked();await page.getByRole('button',{name:'取消',exact:true}).click();await page.evaluate(()=>window.todo.call('testAdvance',{ms:43*86400000}));await groupMenu(page,'自动游戏','管理版本');await expect(page.getByLabel('版本号 *')).toHaveValue('2.5');await expect(page.getByLabel('周期更新')).toBeChecked()}finally{await app.close()}})
