@@ -16,7 +16,7 @@ export function GameCalendar({cat,revision,onOpen,onManage}:{cat:string;revision
  useEffect(()=>{const el=horizontal.current;if(!el)return;const observer=new ResizeObserver(()=>setViewportWidth(el.clientWidth));observer.observe(el);setViewportWidth(el.clientWidth);return ()=>observer.disconnect()},[!!data,cat])
  const open=async(event:CalendarEvent)=>{if(event.preview){setSelected(event);return}try{const task=await call<Task|undefined>('detail',{id:event.task.id});if(task)onOpen(task);else setError('该活动已删除或已轮换，请刷新日历')}catch(e){setError((e as Error).message)}}
  if(!data)return <p className="progress" role={error?'alert':'status'}>{error||'正在读取版本活动…'}</p>
- const gameSections=axis&&data.games.filter(g=>g.group.version).map(entry=><CalendarGameBlock key={entry.group.id} entry={entry} axis={axis} now={data.now} single={!!cat} onOpen={event=>void open(event)} onManage={onManage} limit={limit} onMore={()=>setLimit(limit+500)}/>)
+ const gameSections=axis&&data.games.filter(g=>g.group.version&&g.events.length>0).map(entry=><CalendarGameBlock key={entry.group.id} entry={entry} axis={axis} now={data.now} single={!!cat} onOpen={event=>void open(event)} onManage={onManage} limit={limit} onMore={()=>setLimit(limit+500)}/>)
 
  return <section className={'activity-calendar '+(cat?'single-game-calendar':'multi-game-calendar')} aria-label="版本活动日历">
   {error&&<p role="alert" className="error">{error}</p>}

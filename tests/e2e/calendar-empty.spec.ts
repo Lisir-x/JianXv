@@ -1,0 +1,5 @@
+import {test,expect,_electron as electron} from '@playwright/test'
+import {mkdtempSync} from 'node:fs'
+import {tmpdir} from 'node:os'
+import {join} from 'node:path'
+test('没有活动的游戏日历仅保留时间尺和空白',async()=>{const now=Date.parse('2026-11-19T12:00:00+08:00'),app=await electron.launch({args:['.'],env:{...process.env,TODO_TEST:'1',TODO_NOW:String(now),TODO_DATA_DIR:mkdtempSync(join(tmpdir(),'todo-empty-calendar-'))}});try{const page=await app.firstWindow();await page.waitForSelector('nav');await page.evaluate(now=>window.todo.call('addGroup',{kind:'game',name:'空游戏',version:{number:'1',start:now-86400000,end:now+86400000}}),now);for(const name of ['游戏','空游戏']){await page.locator('nav').getByRole('button',{name,exact:true}).click();await page.getByRole('button',{name:'活动日历',exact:true}).click();await expect(page.locator('.timeline-ruler')).toBeVisible();await expect(page.locator('.calendar-game,.calendar-empty-row')).toHaveCount(0);expect((await page.locator('.timeline-frame').boundingBox())!.height).toBeGreaterThan((await page.locator('.timeline-ruler').boundingBox())!.height)}}finally{await app.close()}})
