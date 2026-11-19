@@ -3,7 +3,7 @@ import {mkdtempSync} from 'node:fs'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 
-test('主模块整块悬停置灰，箭头仅悬停时叠加圆形灰色',async()=>{
+test('未选中主模块整块灰，选中保持底色，箭头悬停叠加圆形灰',async()=>{
  const app=await electron.launch({args:['.'],env:{...process.env,TODO_TEST:'1',TODO_DATA_DIR:mkdtempSync(join(tmpdir(),'todo-nav-hover-'))}})
  try{
   const page=await app.firstWindow()
@@ -15,18 +15,18 @@ test('主模块整块悬停置灰，箭头仅悬停时叠加圆形灰色',async(
   for(const route of ['首页','学习','作业']){
    await page.locator('nav').getByRole('button',{name:route,exact:true}).click()
    await page.locator('.brand').hover()
-   const resting=await background()
+   const resting=await background(),hoverColor=route==='学习'?resting:'rgb(224, 228, 231)'
    expect(await arrow()).toEqual({background:'rgba(0, 0, 0, 0)',border:'0px',radius:'50%',shadow:'none'})
    await label.hover()
-   expect(await background()).toBe('rgb(224, 228, 231)')
+   expect(await background()).toBe(hoverColor)
    expect(await label.evaluate(el=>getComputedStyle(el).backgroundColor)).toBe('rgba(0, 0, 0, 0)')
    expect((await arrow()).background).toBe('rgba(0, 0, 0, 0)')
    await parent.locator('.nav-toggle').hover()
-   expect(await background()).toBe('rgb(224, 228, 231)')
+   expect(await background()).toBe(hoverColor)
    expect(await arrow()).toEqual({background:'rgb(199, 205, 209)',border:'0px',radius:'50%',shadow:'none'})
    expect(await parent.boundingBox()).toEqual(parentBox)
    await page.mouse.move(parentBox!.x+parentBox!.width-2,parentBox!.y+parentBox!.height/2)
-   expect(await background()).toBe('rgb(224, 228, 231)')
+   expect(await background()).toBe(hoverColor)
    expect((await arrow()).background).toBe('rgba(0, 0, 0, 0)')
    await page.locator('.brand').hover()
    expect(await background()).toBe(resting)
