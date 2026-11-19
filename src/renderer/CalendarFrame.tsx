@@ -1,0 +1,13 @@
+import React from 'react'
+import {DateTime} from 'luxon'
+import type {CalendarAxis} from '../shared/game-calendar'
+import {calendarPosition} from '../shared/game-calendar'
+export function CalendarFrame({axis,now,viewport,children,labelWidth=180}:{axis:CalendarAxis;now:number;viewport:React.RefObject<HTMLDivElement|null>;children:React.ReactNode;labelWidth?:number}){
+ const inRange=now>=axis.start&&now<axis.end
+ const weekday=['星期日','星期一','星期二','星期三','星期四','星期五','星期六'][DateTime.fromMillis(now).weekday%7]
+ return <div className="calendar-horizontal timeline-frame" ref={viewport} aria-label="活动日历内容框" tabIndex={0}><div className="calendar-sheet timeline-sheet" style={{'--timeline-width':axis.width+'px','--calendar-label-width':labelWidth+'px'} as React.CSSProperties}>
+  <div className="calendar-date-header calendar-grid-row timeline-ruler"><div className="calendar-name-head">时间尺</div><div className="calendar-date-track">{axis.ticks.map(tick=><span className="calendar-date" key={tick.time} style={{left:calendarPosition(tick.time,axis)+'%'}}>{tick.label}</span>)}</div></div>
+  {children}
+  {inRange&&<div className="calendar-marker-layer" aria-hidden="true"><div className="calendar-today-line timeline-now-line" style={{left:calendarPosition(now,axis)+'%'}}><span className="calendar-today-label timeline-now-label">今天 {DateTime.fromMillis(now).toFormat('MM/dd')} {weekday}</span></div></div>}
+ </div></div>
+}
