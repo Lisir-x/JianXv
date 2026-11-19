@@ -5,7 +5,7 @@ export interface GameVersion {number:string;start:number;end:number}
 export interface CalendarEvent {task:Task;preview:boolean;sourceId:string|null}
 export interface CalendarGame {group:Group;events:CalendarEvent[];hasMore:boolean;hue:number}
 export interface GameCalendarData {games:CalendarGame[];now:number}
-export interface Group {id:string;kind:Kind;name:string;createdAt:number;updatedAt:number;version?:GameVersion}
+export interface Group {id:string;kind:Kind;name:string;createdAt:number;updatedAt:number;version?:GameVersion;pinnedAt?:number|null}
 export interface Task {
   id:string;kind:Kind;cat:string;name:string;start:number|null;end:number;remind:number|null;
   desc:string;reward:string;period:number;zone:string;createdAt:number;updatedAt:number;doneAt:number|null;

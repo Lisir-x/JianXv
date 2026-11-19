@@ -8,6 +8,7 @@ import {gameCalendar} from '../shared/game-calendar'
 export class Service {
  constructor(readonly store:Store,public clock:()=>number=()=>Date.now()){}
  now(){return this.clock()}
+ pinGroup(id:string,pinned:boolean){return this.store.mutate(s=>{if(typeof pinned!=='boolean')throw Error('置顶状态无效');const g=s.groups.find(g=>g.id===id);if(!g)throw Error('子模块不存在');g.pinnedAt=pinned?Math.max(this.now(),...s.groups.filter(x=>x.kind===g.kind).map(x=>(x.pinnedAt??0)+1)):null;g.updatedAt=this.now();return g})}
  calendar(cat='',limit=500){return gameCalendar(this.store.read(),this.now(),cat,limit)}
  addGroup(kind:Kind,name:string,version?:GameVersion){return this.store.mutate(s=>{name=name?.trim();if(!['study','game'].includes(kind)||!name)throw Error('请填写名称');if(s.groups.some(g=>g.kind===kind&&g.name===name))throw Error('同一模块已存在该名称');if(version&&kind!=='game')throw Error('学习分类不能包含游戏版本');const g:Group={id:randomUUID(),kind,name,createdAt:this.now(),updatedAt:this.now(),...(version?{version:validateGameVersion(version)}:{})};s.groups.push(g);return g})}
  updateGame(id:string,name:string,version:GameVersion){return this.store.mutate(s=>{const g=s.groups.find(g=>g.id===id&&g.kind==='game');if(!g)throw Error('游戏不存在');name=name?.trim();if(!name)throw Error('请填写名称');if(s.groups.some(x=>x.id!==id&&x.kind==='game'&&x.name===name))throw Error('同一模块已存在该名称');const checked=validateGameVersion(version);g.name=name;g.version=checked;g.updatedAt=this.now();return g})}

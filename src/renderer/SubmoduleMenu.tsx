@@ -1,0 +1,11 @@
+import React,{useId,useRef,useState} from 'react'
+import {createPortal} from 'react-dom'
+import type {Group} from '../shared/types'
+export type GroupAction='rename'|'pin'|'delete'|'version'
+export function SubmoduleMenu({group,onAction}:{group:Group;onAction:(action:GroupAction,group:Group)=>void}){
+ const id=useId(),trigger=useRef<HTMLButtonElement>(null),menu=useRef<HTMLDivElement>(null),[open,setOpen]=useState(false)
+ const close=()=>{menu.current?.hidePopover();setOpen(false);trigger.current?.focus()}
+ const action=(value:GroupAction)=>{close();onAction(value,group)}
+ const toggle=()=>{if(open){close();return}const box=trigger.current!.getBoundingClientRect(),el=menu.current!;el.showPopover();el.style.left=Math.min(box.right+7,window.innerWidth-el.offsetWidth-10)+'px';el.style.top=Math.max(8,Math.min(box.top,window.innerHeight-el.offsetHeight-10))+'px';setOpen(true);el.querySelector<HTMLButtonElement>('button')?.focus()}
+ return <><button className="submodule-more" type="button" aria-label={'管理 '+group.name} aria-haspopup="menu" aria-expanded={open} aria-controls={id} ref={trigger} onClick={e=>{e.stopPropagation();toggle()}}><span aria-hidden="true">···</span></button>{createPortal(<div id={id} ref={menu} popover="auto" className="submodule-menu" role="menu" aria-label={group.name+'管理菜单'} onToggle={e=>{if(e.newState==='closed')setOpen(false)}} onKeyDown={e=>{const buttons=[...e.currentTarget.querySelectorAll<HTMLButtonElement>('button')],index=buttons.indexOf(document.activeElement as HTMLButtonElement);if(['ArrowDown','ArrowUp','Home','End'].includes(e.key)){e.preventDefault();buttons[e.key==='Home'?0:e.key==='End'?buttons.length-1:(index+(e.key==='ArrowDown'?1:-1)+buttons.length)%buttons.length]?.focus()}else if(e.key==='Escape'||e.key==='Tab'){e.preventDefault();close()}}}><p>{group.name}</p><button type="button" role="menuitem" onClick={()=>action('rename')}>重命名</button><button type="button" role="menuitem" onClick={()=>action('pin')}>{group.pinnedAt!=null?'取消置顶':'置顶'}</button>{group.kind==='game'&&<button type="button" role="menuitem" onClick={()=>action('version')}>管理版本</button>}<hr/><button type="button" role="menuitem" className="danger" onClick={()=>action('delete')}>删除</button></div>,document.body)}</>
+}

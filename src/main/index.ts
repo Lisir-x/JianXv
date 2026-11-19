@@ -75,6 +75,7 @@ else {
           case 'addGroup':data=service.addGroup(payload.kind,payload.name,payload.version);break
           case 'updateGame':data=service.updateGame(payload.id,payload.name,payload.version);break
           case 'renameGroup':data=service.renameGroup(payload.id,payload.name);break
+          case 'pinGroup':data=service.pinGroup(payload.id,payload.pinned);break
           case 'groupCounts':data=service.groupCounts(payload.id);break
           case 'deleteGroup':data=service.deleteGroup(payload.id);break
           case 'save':data=service.save(payload.input as TaskInput,payload.id,payload.scope);break
