@@ -10,8 +10,11 @@ import {CalendarGameBlock} from './CalendarGameBlock'
 export function GameCalendar({cat,revision,onOpen,onManage}:{cat:string;revision:unknown;onOpen:(task:Task)=>void;onManage:(game:Group)=>void}){
  const [data,setData]=useState<GameCalendarData|null>(null),[error,setError]=useState(''),[limit,setLimit]=useState(500),[selected,setSelected]=useState<CalendarEvent|null>(null)
  const horizontal=useRef<HTMLDivElement>(null)
+ const [viewportWidth,setViewportWidth]=useState(0)
  useEffect(()=>{let active=true;void call<GameCalendarData>('calendar',{cat,limit}).then(value=>{if(active){setData(value);setError('')}}).catch(e=>{if(active)setError((e as Error).message)});return ()=>{active=false}},[cat,limit,revision])
- const axis=data?calendarAxis(data.games.flatMap(g=>g.group.version?[g.group.version]:[]),localZone(),55):null
+ const rawAxis=data?calendarAxis(data.games.flatMap(g=>g.group.version?[g.group.version]:[]),localZone(),55,!!cat):null
+ const axis=rawAxis&&cat?{...rawAxis,width:Math.max(1,viewportWidth-64)}:rawAxis
+ useEffect(()=>{const el=horizontal.current;if(!el)return;const observer=new ResizeObserver(()=>setViewportWidth(el.clientWidth));observer.observe(el);setViewportWidth(el.clientWidth);return ()=>observer.disconnect()},[!!data,cat])
  const current=axis&&data?calendarPosition(data.now,axis):null,inRange=!!axis&&!!data&&data.now>=axis.start&&data.now<axis.end
  const locate=()=>{if(horizontal.current&&axis)horizontal.current.scrollTo({left:Math.max(0,(cat?0:110)+(horizontal.current.querySelector<HTMLElement>('.calendar-date-track')?.clientWidth??axis.width)*(inRange?current!:0)/100-horizontal.current.clientWidth/2),behavior:'smooth'})}
  useEffect(()=>{if(cat&&axis){const id=requestAnimationFrame(locate);return ()=>cancelAnimationFrame(id)}},[cat,axis?.start,axis?.end])
