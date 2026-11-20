@@ -22,8 +22,8 @@ const legacyRoot=join(app.getPath('appData'),'PersonalTodo',app.isPackaged?'data
 app.setPath('userData',test?join(dataOverride||testHome||locationHome,'profile'):join(localAppData,'PersonalTodo','profiles',profileId))
 const applicationName='笺序',appId='Jianxu.PaperTaskbar'
 app.setName(applicationName)
-// Keep the existing notification identity; the visible window has a separate shell group.
-app.setAppUserModelId('local.personal.todo')
+// Only installed/packaged builds share the Windows notification identity.
+app.setAppUserModelId(app.isPackaged?appId:'local.personal.todo')
 let win:BrowserWindow|null=null,tray:Tray|null=null,quitting=false
 const removing=(app.isPackaged||test)&&process.argv.includes('--remove-app-data')
 if(!app.requestSingleInstanceLock())app.exit(removing?1:0)

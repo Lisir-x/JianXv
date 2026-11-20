@@ -3,19 +3,99 @@
 !define APP_FILENAME "${PRODUCT_FILENAME}"
 
 !ifndef BUILD_UNINSTALLER
+  !include nsDialogs.nsh
+  !include "${PROJECT_DIR}\scripts\jianxu-directory.nsh"
+
   Var JianxuPerUserFolder
   Var JianxuPerMachineFolder
+  Var JianxuDirectory
+  Var JianxuDesktopCheckbox
+  Var JianxuDesktopChoice
 
   !macro customPageAfterChangeDir
-    ; Keep the registered directory for an in-place update. The new default
-    ; suffix still applies to a fresh install or an explicitly chosen parent.
-    !undef MUI_PAGE_CUSTOMFUNCTION_PRE
-    !define MUI_PAGE_CUSTOMFUNCTION_PRE jianxuPrepareInstallDirectory
-    Function jianxuPrepareInstallDirectory
-      ${If} $INSTDIR != $JianxuPerUserFolder
-      ${AndIf} $INSTDIR != $JianxuPerMachineFolder
-        Call instFilesPre
+    Page custom jianxuInstallOptions jianxuSaveInstallOptions
+
+    Function jianxuInstallOptions
+      ${If} ${isUpdated}
+        Abort
       ${EndIf}
+
+      ; A stale registration must not lock the location field for a fresh install.
+      ${If} $INSTDIR == $JianxuPerUserFolder
+      ${OrIf} $INSTDIR == $JianxuPerMachineFolder
+        ${IfNot} ${FileExists} "$INSTDIR\*.*"
+          ${GetParent} "$INSTDIR" $0
+          Push $0
+          Call jianxuNormalizeDirectory
+          Pop $INSTDIR
+        ${EndIf}
+      ${EndIf}
+
+      !insertmacro MUI_HEADER_TEXT "安装选项" "选择笺序的安装位置和快捷方式。"
+      nsDialogs::Create 1018
+      Pop $0
+      ${If} $0 == error
+        Abort
+      ${EndIf}
+
+      ${NSD_CreateLabel} 0 0 100% 12u "安装目录"
+      Pop $0
+      ${NSD_CreateDirRequest} 0 16u 76% 14u "$INSTDIR"
+      Pop $JianxuDirectory
+      ${NSD_CreateBrowseButton} 79% 16u 21% 14u "浏览..."
+      Pop $0
+      ${NSD_OnClick} $0 jianxuBrowseDirectory
+      ${If} $INSTDIR == $JianxuPerUserFolder
+      ${OrIf} $INSTDIR == $JianxuPerMachineFolder
+        EnableWindow $JianxuDirectory 0
+        EnableWindow $0 0
+        ${NSD_CreateLabel} 0 38u 100% 14u "检测到已安装的版本，将在原位置更新并保留数据。"
+      ${Else}
+        ${NSD_CreateLabel} 0 38u 100% 14u "选择上一级文件夹后，安装程序会自动补上「笺序」。"
+      ${EndIf}
+      Pop $0
+
+      ${NSD_CreateCheckbox} 0 63u 100% 14u "创建桌面快捷方式"
+      Pop $JianxuDesktopCheckbox
+      ${NSD_SetState} $JianxuDesktopCheckbox $JianxuDesktopChoice
+      ${NSD_CreateLabel} 0 86u 100% 24u "安装后，会在 Windows 开始菜单的「所有应用」中添加「笺序」，用于启动和系统通知。"
+      Pop $0
+      nsDialogs::Show
+    FunctionEnd
+
+    Function jianxuBrowseDirectory
+      Pop $0 ; Button handle
+      ${NSD_GetText} $JianxuDirectory $0
+      ${IfNot} ${FileExists} "$0\*.*"
+        ${GetParent} "$0" $0
+      ${EndIf}
+      nsDialogs::SelectFolderDialog "选择安装位置" "$0"
+      Pop $0
+      ${If} $0 != error
+        Push $0
+        Call jianxuNormalizeDirectory
+        Pop $0
+        ${If} $0 != ""
+          ${NSD_SetText} $JianxuDirectory "$0"
+        ${EndIf}
+      ${EndIf}
+    FunctionEnd
+
+    Function jianxuSaveInstallOptions
+      ${NSD_GetState} $JianxuDesktopCheckbox $JianxuDesktopChoice
+      ${If} $INSTDIR == $JianxuPerUserFolder
+      ${OrIf} $INSTDIR == $JianxuPerMachineFolder
+        Return
+      ${EndIf}
+      ${NSD_GetText} $JianxuDirectory $0
+      Push $0
+      Call jianxuNormalizeDirectory
+      Pop $0
+      ${If} $0 == ""
+        MessageBox MB_OK|MB_ICONEXCLAMATION "请选择有效的安装目录。"
+        Abort
+      ${EndIf}
+      StrCpy $INSTDIR $0
     FunctionEnd
   !macroend
 
@@ -59,6 +139,10 @@
 !macroend
 
 !macro customInit
+  ReadRegStr $JianxuDesktopChoice SHELL_CONTEXT "${INSTALL_REGISTRY_KEY}" "DesktopShortcut"
+  ${If} $JianxuDesktopChoice == ""
+    StrCpy $JianxuDesktopChoice ${BST_CHECKED}
+  ${EndIf}
   !insertmacro ProtectLegacyData HKCU
   !insertmacro ProtectLegacyData HKLM
   ReadRegStr $JianxuPerUserFolder HKCU "${INSTALL_REGISTRY_KEY}" "InstallLocation"
@@ -66,18 +150,34 @@
 !macroend
 
 
-!macro RefreshJianxuShortcut link
-  ${If} ${FileExists} "${link}"
-    CreateShortCut "${link}" "$appExe" "" "$INSTDIR\resources\jianxu-taskbar.ico" 0 "" "" "${APP_DESCRIPTION}"
-    WinShell::SetLnkAUMI "${link}" "${APP_ID}"
-    System::Call 'shell32::SHChangeNotify(i 0x2000, i 0x1005, w "${link}", p 0)'
-  ${EndIf}
+!macro WriteJianxuShortcut link
+  CreateShortCut "${link}" "$appExe" "" "$INSTDIR\resources\jianxu-taskbar.ico" 0 "" "" "${APP_DESCRIPTION}"
+  WinShell::SetLnkAUMI "${link}" "${APP_ID}"
+  System::Call 'shell32::SHChangeNotify(i 0x2000, i 0x1005, w "${link}", p 0)'
 !macroend
 
 !macro customInstall
-  !insertmacro RefreshJianxuShortcut "$newStartMenuLink"
-  ${IfNot} ${isNoDesktopShortcut}
-    !insertmacro RefreshJianxuShortcut "$newDesktopLink"
+  ; The Start menu link and the app process share this notification identity.
+  WriteRegStr SHELL_CONTEXT "Software\Classes\AppUserModelId\${APP_ID}" "DisplayName" "${PRODUCT_NAME}"
+  WriteRegStr SHELL_CONTEXT "Software\Classes\AppUserModelId\${APP_ID}" "IconUri" "$INSTDIR\resources\jianxu-notification.png"
+  !insertmacro createMenuDirectory
+  !insertmacro WriteJianxuShortcut "$newStartMenuLink"
+  StrCpy $launchLink "$newStartMenuLink"
+  ${If} $oldDesktopLink != $newDesktopLink
+  ${AndIf} ${FileExists} "$oldDesktopLink"
+    WinShell::UninstShortcut "$oldDesktopLink"
+    Delete "$oldDesktopLink"
+  ${EndIf}
+  ${If} $JianxuDesktopChoice == ${BST_CHECKED}
+  ${AndIfNot} ${isNoDesktopShortcut}
+    !insertmacro WriteJianxuShortcut "$newDesktopLink"
+    WriteRegStr SHELL_CONTEXT "${INSTALL_REGISTRY_KEY}" "DesktopShortcut" "${BST_CHECKED}"
+  ${Else}
+    ${If} ${FileExists} "$newDesktopLink"
+      WinShell::UninstShortcut "$newDesktopLink"
+      Delete "$newDesktopLink"
+    ${EndIf}
+    WriteRegStr SHELL_CONTEXT "${INSTALL_REGISTRY_KEY}" "DesktopShortcut" "${BST_UNCHECKED}"
   ${EndIf}
 !macroend
 
@@ -91,6 +191,9 @@
       SetErrorLevel 2
       Quit
     ${EndIf}
+    DeleteRegKey SHELL_CONTEXT "Software\Classes\AppUserModelId\${APP_ID}"
+    WinShell::UninstShortcut "$oldDesktopLink"
+    Delete "$oldDesktopLink"
   ${EndIf}
 !macroend
 
