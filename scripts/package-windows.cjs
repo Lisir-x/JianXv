@@ -27,7 +27,7 @@ async function main() {
       publish: 'never',
     })
     if (unpackOnly) console.log(unpacked)
-    else if (!artifacts.includes(join(release, '我的待办 Setup.exe'))) throw Error('Windows installer was not produced')
+    else if (!artifacts.includes(join(release, '笺序 Setup.exe'))) throw Error('Windows installer was not produced')
   } finally {
     if (saved.length) mkdirSync(unpacked, { recursive: true })
     for (const name of saved) {

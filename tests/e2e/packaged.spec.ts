@@ -3,7 +3,7 @@ import {mkdtempSync,existsSync} from 'node:fs'
 import {tmpdir} from 'node:os'
 import {join,resolve} from 'node:path'
 import {spawn} from 'node:child_process'
-const exe=resolve(process.env.TODO_PACKAGED_EXE||'release/win-unpacked/我的待办.exe')
+const exe=resolve(process.env.TODO_PACKAGED_EXE||'release/win-unpacked/笺序.exe')
 test('阶段12 打包版本离线、单实例、持久化与真实通知',async()=>{
  test.skip(!existsSync(exe),'先生成本机打包版本')
  const dir=mkdtempSync(join(tmpdir(),'todo-packaged-')),now=Date.now(),env={...process.env,TODO_TEST:'1',TODO_DATA_DIR:dir,TODO_NOW:String(now)}

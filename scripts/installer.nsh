@@ -1,4 +1,52 @@
-﻿!macro ProtectLegacyData ROOT_KEY
+; electron-builder falls back to the package name when the product name is non-ASCII.
+!undef APP_FILENAME
+!define APP_FILENAME "${PRODUCT_FILENAME}"
+
+!ifndef BUILD_UNINSTALLER
+  Var JianxuPerUserFolder
+  Var JianxuPerMachineFolder
+
+  !macro customPageAfterChangeDir
+    ; Keep the registered directory for an in-place update. The new default
+    ; suffix still applies to a fresh install or an explicitly chosen parent.
+    !undef MUI_PAGE_CUSTOMFUNCTION_PRE
+    !define MUI_PAGE_CUSTOMFUNCTION_PRE jianxuPrepareInstallDirectory
+    Function jianxuPrepareInstallDirectory
+      ${If} $INSTDIR != $JianxuPerUserFolder
+      ${AndIf} $INSTDIR != $JianxuPerMachineFolder
+        Call instFilesPre
+      ${EndIf}
+    FunctionEnd
+  !macroend
+
+  !macro customFiles_x64
+    ; The old uninstaller has closed the app and preserved its data. Rename the
+    ; whole upgraded folder before the new registry entries and shortcuts are written.
+    ${If} $INSTDIR == $JianxuPerUserFolder
+    ${OrIf} $INSTDIR == $JianxuPerMachineFolder
+      ${GetFileName} "$INSTDIR" $R8
+      ${If} $R8 == "personal-todo"
+      ${OrIf} $R8 == "PersonalTodo"
+        ${GetParent} "$INSTDIR" $R9
+        StrCpy $R9 "$R9\${APP_FILENAME}"
+        SetOutPath "$TEMP"
+        ClearErrors
+        Rename "$INSTDIR" "$R9"
+        ${If} ${Errors}
+          MessageBox MB_OK|MB_ICONEXCLAMATION "已在原目录完成更新，但无法将安装文件夹改名为「笺序」。程序及原有数据仍在 $INSTDIR。请确认同级目录没有同名文件夹，关闭占用目录的程序后重试。" /SD IDOK
+          ClearErrors
+        ${Else}
+          StrCpy $INSTDIR $R9
+          StrCpy $appExe "$INSTDIR\${APP_EXECUTABLE_FILENAME}"
+          StrCpy $keepShortcuts "false"
+        ${EndIf}
+        SetOutPath "$INSTDIR"
+      ${EndIf}
+    ${EndIf}
+  !macroend
+!endif
+
+!macro ProtectLegacyData ROOT_KEY
   ReadRegStr $R8 ${ROOT_KEY} "${INSTALL_REGISTRY_KEY}" "InstallLocation"
   ${If} $R8 != ""
     ${If} ${FileExists} "$R8\我的待办数据\*.*"
@@ -13,6 +61,8 @@
 !macro customInit
   !insertmacro ProtectLegacyData HKCU
   !insertmacro ProtectLegacyData HKLM
+  ReadRegStr $JianxuPerUserFolder HKCU "${INSTALL_REGISTRY_KEY}" "InstallLocation"
+  ReadRegStr $JianxuPerMachineFolder HKLM "${INSTALL_REGISTRY_KEY}" "InstallLocation"
 !macroend
 
 !macro customUnInstall

@@ -9,5 +9,5 @@ export function Navigation({groups,page,cat,onRoute,onGroupAction}:{groups:Group
 }
 export function Breadcrumbs({page,cat,title,onRoute}:{page:Page;cat:string;title?:string;onRoute:(page:Page,cat?:string)=>void}){
  const parent=page==='study'?'学习':page==='game'?'游戏':page==='settings'?'设置':'首页'
- return <div className="breadcrumbs" aria-label="页面路径"><span className="breadcrumb-root">我的待办</span><span aria-hidden="true">/</span>{cat?<><button className="text breadcrumb-parent" aria-label={'返回'+parent+'总览'} onClick={()=>onRoute(page)}>{parent}</button><span aria-hidden="true">›</span><span className="breadcrumb-current">{title}</span></>:<span className="breadcrumb-current">{parent}</span>}</div>
+ return <div className="breadcrumbs" aria-label="页面路径"><span className="breadcrumb-root">笺序</span><span aria-hidden="true">/</span>{cat?<><button className="text breadcrumb-parent" aria-label={'返回'+parent+'总览'} onClick={()=>onRoute(page)}>{parent}</button><span aria-hidden="true">›</span><span className="breadcrumb-current">{title}</span></>:<span className="breadcrumb-current">{parent}</span>}</div>
 }

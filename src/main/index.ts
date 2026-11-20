@@ -19,7 +19,7 @@ const locationHome=dataOverride||programHome
 const profileId=createHash('sha256').update(process.platform==='win32'?programHome.toLowerCase():programHome).digest('hex').slice(0,16)
 const legacyRoot=join(app.getPath('appData'),'PersonalTodo',app.isPackaged?'data-user':'development')
 app.setPath('userData',test?join(dataOverride||testHome||locationHome,'profile'):join(localAppData,'PersonalTodo','profiles',profileId))
-app.setName('我的待办')
+app.setName('笺序')
 app.setAppUserModelId('local.personal.todo')
 let win:BrowserWindow|null=null,tray:Tray|null=null,quitting=false
 const removing=(app.isPackaged||test)&&process.argv.includes('--remove-app-data')
@@ -76,9 +76,9 @@ else {
     win=new BrowserWindow({width:1160,height:820,minWidth:720,minHeight:600,show:!test&&!process.argv.includes('--background'),backgroundColor:'#f7f8fa',icon:join(app.getAppPath(),'assets','icon.png'),webPreferences:{preload:join(__dirname,'../preload/index.js'),contextIsolation:true,nodeIntegration:false,sandbox:true,backgroundThrottling:!test}})
     win.webContents.setWindowOpenHandler(()=>({action:'deny'}))
     win.webContents.on('will-navigate',e=>e.preventDefault())
-    win.on('close',e=>{if(!quitting){e.preventDefault();win?.hide();if(!db.read().settings.trayExplained){if(!test)tray?.displayBalloon({title:'我的待办已在后台运行',content:'仍会按时提醒。通过托盘菜单可以打开窗口或退出应用。'});db.mutate(s=>{s.settings.trayExplained=true})}}})
+    win.on('close',e=>{if(!quitting){e.preventDefault();win?.hide();if(!db.read().settings.trayExplained){if(!test)tray?.displayBalloon({title:'笺序已在后台运行',content:'仍会按时提醒。通过托盘菜单可以打开窗口或退出应用。'});db.mutate(s=>{s.settings.trayExplained=true})}}})
     const image=nativeImage.createFromPath(join(app.getAppPath(),'assets','tray.png'))
-    tray=new Tray(image);tray.setToolTip('我的待办')
+    tray=new Tray(image);tray.setToolTip('笺序')
     tray.setContextMenu(Menu.buildFromTemplate([{label:'打开主窗口',click:show},{label:'退出应用',click:()=>{quitting=true;app.quit()}}]));tray.on('double-click',show)
     ipcMain.handle('todo:call',async(event,action,payload:any={})=>{
       if(event.sender!==win?.webContents)return {ok:false,error:'非法调用来源'}

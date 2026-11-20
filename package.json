@@ -1,6 +1,6 @@
 {
   "name": "personal-todo",
-  "productName": "我的待办",
+  "productName": "笺序",
   "version": "1.0.0",
   "description": "离线个人待办与游戏活动提醒",
   "author": "Personal",
@@ -23,7 +23,7 @@
   },
   "build": {
     "appId": "local.personal.todo",
-    "productName": "我的待办",
+    "productName": "笺序",
     "directories": {
       "output": "release"
     },
@@ -57,7 +57,7 @@
       ]
     },
     "nsis": {
-      "artifactName": "我的待办 Setup.${ext}",
+      "artifactName": "笺序 Setup.${ext}",
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
