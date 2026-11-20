@@ -3,16 +3,10 @@
 !define APP_FILENAME "${PRODUCT_FILENAME}"
 
 !ifndef BUILD_UNINSTALLER
-  !include nsDialogs.nsh
-  Var JianxuDesktopChoice
-  Var JianxuStartChoice
-  Var JianxuDesktopControl
-  Var JianxuStartControl
   Var JianxuPerUserFolder
   Var JianxuPerMachineFolder
 
   !macro customPageAfterChangeDir
-    Page custom JianxuShortcutPage JianxuShortcutLeave
     ; Keep the registered directory for an in-place update. The new default
     ; suffix still applies to a fresh install or an explicitly chosen parent.
     !undef MUI_PAGE_CUSTOMFUNCTION_PRE
@@ -24,28 +18,6 @@
       ${EndIf}
     FunctionEnd
   !macroend
-
-  Function JianxuShortcutPage
-    nsDialogs::Create 1018
-    Pop $0
-    ${If} $0 == error
-      Abort
-    ${EndIf}
-    ${NSD_CreateLabel} 0 0 100% 24u "请选择要创建的快捷方式："
-    Pop $0
-    ${NSD_CreateCheckbox} 0 30u 100% 12u "创建桌面快捷方式"
-    Pop $JianxuDesktopControl
-    ${NSD_SetState} $JianxuDesktopControl $JianxuDesktopChoice
-    ${NSD_CreateCheckbox} 0 50u 100% 12u "添加到开始菜单"
-    Pop $JianxuStartControl
-    ${NSD_SetState} $JianxuStartControl $JianxuStartChoice
-    nsDialogs::Show
-  FunctionEnd
-
-  Function JianxuShortcutLeave
-    ${NSD_GetState} $JianxuDesktopControl $JianxuDesktopChoice
-    ${NSD_GetState} $JianxuStartControl $JianxuStartChoice
-  FunctionEnd
 
   !macro customFiles_x64
     ; The old uninstaller has closed the app and preserved its data. Rename the
@@ -87,8 +59,6 @@
 !macroend
 
 !macro customInit
-  StrCpy $JianxuDesktopChoice ${BST_UNCHECKED}
-  StrCpy $JianxuStartChoice ${BST_CHECKED}
   !insertmacro ProtectLegacyData HKCU
   !insertmacro ProtectLegacyData HKLM
   ReadRegStr $JianxuPerUserFolder HKCU "${INSTALL_REGISTRY_KEY}" "InstallLocation"
@@ -105,28 +75,14 @@
 !macroend
 
 !macro customInstall
-  WriteRegStr SHELL_CONTEXT "Software\Classes\AppUserModelId\${APP_ID}" "DisplayName" "${PRODUCT_NAME}"
-  WriteRegStr SHELL_CONTEXT "Software\Classes\AppUserModelId\${APP_ID}" "IconUri" "$INSTDIR\resources\jianxu-taskbar.ico"
-  ${If} $JianxuStartChoice == ${BST_CHECKED}
-    CreateShortCut "$newStartMenuLink" "$appExe" "" "$INSTDIR\resources\jianxu-taskbar.ico" 0 "" "" "${APP_DESCRIPTION}"
-    WinShell::SetLnkAUMI "$newStartMenuLink" "${APP_ID}"
-  ${Else}
-    Delete "$newStartMenuLink"
-  ${EndIf}
-  ${If} $JianxuDesktopChoice == ${BST_CHECKED}
-    CreateShortCut "$newDesktopLink" "$appExe" "" "$INSTDIR\resources\jianxu-taskbar.ico" 0 "" "" "${APP_DESCRIPTION}"
-    WinShell::SetLnkAUMI "$newDesktopLink" "${APP_ID}"
-  ${Else}
-    Delete "$newDesktopLink"
+  !insertmacro RefreshJianxuShortcut "$newStartMenuLink"
+  ${IfNot} ${isNoDesktopShortcut}
+    !insertmacro RefreshJianxuShortcut "$newDesktopLink"
   ${EndIf}
 !macroend
 
 !macro customUnInstall
   ${IfNot} ${isUpdated}
-    WinShell::UninstShortcut "$oldDesktopLink"
-    WinShell::UninstShortcut "$oldStartMenuLink"
-    Delete "$oldDesktopLink"
-    Delete "$oldStartMenuLink"
     ClearErrors
     ExecWait '"$INSTDIR\${APP_EXECUTABLE_FILENAME}" --remove-app-data' $R8
     ${If} ${Errors}
@@ -135,7 +91,6 @@
       SetErrorLevel 2
       Quit
     ${EndIf}
-    DeleteRegKey SHELL_CONTEXT "Software\Classes\AppUserModelId\${APP_ID}"
   ${EndIf}
 !macroend
 
