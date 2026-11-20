@@ -62,7 +62,7 @@
       "oneClick": false,
       "perMachine": false,
       "createDesktopShortcut": false,
-      "createStartMenuShortcut": true,
+      "createStartMenuShortcut": false,
       "deleteAppDataOnUninstall": false,
       "packElevateHelper": false,
       "allowElevation": false,
@@ -84,6 +84,10 @@
       {
         "from": "assets/icon.png",
         "to": "jianxu-notification.png"
+      },
+      {
+        "from": "scripts/windows-reminder.ps1",
+        "to": "windows-reminder.ps1"
       },
       {
         "from": "src/renderer/fonts/OFL-NotoSerifSC.txt",

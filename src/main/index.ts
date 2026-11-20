@@ -10,6 +10,7 @@ import { restoreDamagedDatabase } from './startup'
 import {removeManagedData} from './uninstall-data'
 import {startupDataLocation,copyData,saveLocation,migrateData,isWithin} from './location'
 import {refreshPinnedTaskbarIcons} from './windows-taskbar'
+import {reminderTaskFromArgs,showWindowsReminder,usesShortcutFreeReminders} from './windows-reminder'
 import type { TaskInput,Notice } from '../shared/types'
 const test=process.env.TODO_TEST==='1'
 const testHome=test?process.env.TODO_HOME:undefined
@@ -25,7 +26,9 @@ app.setName(applicationName)
 // Only installed/packaged builds share the Windows notification identity.
 app.setAppUserModelId(app.isPackaged?appId:'local.personal.todo')
 let win:BrowserWindow|null=null,tray:Tray|null=null,quitting=false
-const removing=(app.isPackaged||test)&&process.argv.includes('--remove-app-data')
+const shortcutFreeReminders=process.platform==='win32'&&app.isPackaged&&usesShortcutFreeReminders()
+let pendingReminder=shortcutFreeReminders?reminderTaskFromArgs(process.argv):undefined
+const removing=(app.isPackaged||test)&&process.argv[app.isPackaged?1:2]==='--remove-app-data'
 if(!app.requestSingleInstanceLock())app.exit(removing?1:0)
 else if(removing){
  try{
@@ -79,11 +82,29 @@ else {
       }else win.show()
       win.focus()
     }
-    app.on('second-instance',show)
+    let rendererSubscribed=false
+    app.on('second-instance',(_event,args)=>{
+      show()
+      const taskId=shortcutFreeReminders?reminderTaskFromArgs(args):undefined
+      if(taskId&&rendererSubscribed)notifyChanged({taskId})
+      else if(taskId)pendingReminder=taskId
+    })
+    const supportsNotifications=()=>shortcutFreeReminders||Notification.isSupported()
     const scheduler=new Scheduler(service,(notice:Notice)=>{
-      if(!Notification.isSupported())throw Error('此系统不支持通知')
-      const n=new Notification({title:notice.kind==='study'?'待办提醒':'游戏活动提醒',body:notice.name+' · '+service.groupName(notice.cat),silent:false})
-      liveNotifications.add(n);n.on('show',()=>{notificationShows++});n.on('failed',(_e,error)=>{notificationFailures++;db.mutate(s=>{const row=s.notices.find(x=>x.id===notice.id);if(row)row.system='failed'});notifyChanged({error:'Windows 未显示通知：'+error})});n.on('close',()=>liveNotifications.delete(n));n.on('click',()=>{show();notifyChanged({taskId:notice.taskId})});n.show()
+      if(!supportsNotifications())throw Error('此系统不支持通知')
+      const title=notice.kind==='study'?'待办提醒':'游戏活动提醒',body=notice.name+' · '+service.groupName(notice.cat)
+      const failed=(error:string)=>{
+        if(quitting)return
+        notificationFailures++
+        db.mutate(s=>{const row=s.notices.find(x=>x.id===notice.id);if(row)row.system='failed'})
+        notifyChanged({error:'Windows 未显示通知：'+error})
+      }
+      if(shortcutFreeReminders){
+        showWindowsReminder(appId,title,body,notice.taskId,error=>error?failed(error.message):notificationShows++)
+        return
+      }
+      const n=new Notification({title,body,silent:false})
+      liveNotifications.add(n);n.on('show',()=>{notificationShows++});n.on('failed',(_e,error)=>failed(error));n.on('close',()=>liveNotifications.delete(n));n.on('click',()=>{show();notifyChanged({taskId:notice.taskId})});n.show()
     },notifyChanged)
     const scan=(mode:'live'|'missed'='live')=>{try{scheduler.scan(mode)}catch(e){notifyChanged({error:'提醒检查失败：'+(e as Error).message})}}
     const startupArgs=app.isPackaged?['--background']:[app.getAppPath(),'--background']
@@ -110,8 +131,8 @@ else {
         if(action==='snapshot'&&!importing&&!recovery.busy)scan()
         let data:unknown
         switch(action){
-          case 'health':data={groups:db.read().groups.length,tray:!!tray,notifications:Notification.isSupported(),path:db.path,notificationShows,notificationFailures,visible:win?.isVisible()};break
-          case 'snapshot':data={...service.snapshot(Math.min(Math.max(Number(payload.limit)||100,1),10000),{kind:payload.kind,cat:payload.cat,filter:payload.filter}),notificationSupported:Notification.isSupported(),startupActual:startupActual()};break
+          case 'health':data={groups:db.read().groups.length,tray:!!tray,notifications:supportsNotifications(),path:db.path,notificationShows,notificationFailures,visible:win?.isVisible()};break
+          case 'snapshot':data={...service.snapshot(Math.min(Math.max(Number(payload.limit)||100,1),10000),{kind:payload.kind,cat:payload.cat,filter:payload.filter}),notificationSupported:supportsNotifications(),startupActual:startupActual()};break
           case 'detail':data=service.task(payload.id);break
           case 'calendar':data=service.calendar(typeof payload.cat==='string'?payload.cat:'',Number(payload.limit)||500);break
           case 'addGroup':data=service.addGroup(payload.kind,payload.name,payload.version);break
@@ -158,6 +179,14 @@ else {
           case 'quit':quitting=true;setImmediate(()=>app.quit());break
           default:throw Error('不支持的操作')
         }
+        if(action==='snapshot'){
+          rendererSubscribed=true
+          if(pendingReminder){
+            const taskId=pendingReminder
+            pendingReminder=undefined
+            notifyChanged({taskId})
+          }
+        }
         if(!['snapshot','health','detail','groupCounts','calendar'].includes(action)){if(!['quit','openWindow'].includes(action))scan();notifyChanged()}
         return {ok:true,data}
       }catch(e){return {ok:false,error:e instanceof Error?e.message:String(e)}}
@@ -170,11 +199,11 @@ else {
       refreshPinnedTaskbarIcons({appId,name:applicationName,exe,icon,pinnedDir,relaunchArgs})
     }
     windowReady=true
-    if(pendingShow||(!test&&!process.argv.includes('--background')))show()
+    if(pendingShow||pendingReminder||(!test&&!process.argv.includes('--background')))show()
     scan('missed')
     powerMonitor.on('resume',()=>{scan('missed');notifyChanged()})
     timer.current=setInterval(()=>{scan();notifyChanged()},15000)
-    if(process.env.TODO_SMOKE_RESULT){writeFileSync(process.env.TODO_SMOKE_RESULT,JSON.stringify({groups:db.read().groups.length,tray:!!tray,notifications:Notification.isSupported()}));quitting=true;app.quit()}
+    if(process.env.TODO_SMOKE_RESULT){writeFileSync(process.env.TODO_SMOKE_RESULT,JSON.stringify({groups:db.read().groups.length,tray:!!tray,notifications:supportsNotifications()}));quitting=true;app.quit()}
   })
   app.on('before-quit',()=>{quitting=true})
 }

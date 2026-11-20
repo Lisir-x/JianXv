@@ -11,6 +11,8 @@
   Var JianxuDirectory
   Var JianxuDesktopCheckbox
   Var JianxuDesktopChoice
+  Var JianxuStartMenuCheckbox
+  Var JianxuStartMenuChoice
 
   !macro customPageAfterChangeDir
     Page custom jianxuInstallOptions jianxuSaveInstallOptions
@@ -49,17 +51,14 @@
       ${OrIf} $INSTDIR == $JianxuPerMachineFolder
         EnableWindow $JianxuDirectory 0
         EnableWindow $0 0
-        ${NSD_CreateLabel} 0 38u 100% 14u "检测到已安装的版本，将在原位置更新并保留数据。"
-      ${Else}
-        ${NSD_CreateLabel} 0 38u 100% 14u "选择上一级文件夹后，安装程序会自动补上「笺序」。"
       ${EndIf}
-      Pop $0
 
-      ${NSD_CreateCheckbox} 0 63u 100% 14u "创建桌面快捷方式"
+      ${NSD_CreateCheckbox} 0 45u 100% 14u "创建桌面快捷方式"
       Pop $JianxuDesktopCheckbox
       ${NSD_SetState} $JianxuDesktopCheckbox $JianxuDesktopChoice
-      ${NSD_CreateLabel} 0 86u 100% 24u "安装后，会在 Windows 开始菜单的「所有应用」中添加「笺序」，用于启动和系统通知。"
-      Pop $0
+      ${NSD_CreateCheckbox} 0 65u 100% 14u "添加到开始菜单"
+      Pop $JianxuStartMenuCheckbox
+      ${NSD_SetState} $JianxuStartMenuCheckbox $JianxuStartMenuChoice
       nsDialogs::Show
     FunctionEnd
 
@@ -83,6 +82,7 @@
 
     Function jianxuSaveInstallOptions
       ${NSD_GetState} $JianxuDesktopCheckbox $JianxuDesktopChoice
+      ${NSD_GetState} $JianxuStartMenuCheckbox $JianxuStartMenuChoice
       ${If} $INSTDIR == $JianxuPerUserFolder
       ${OrIf} $INSTDIR == $JianxuPerMachineFolder
         Return
@@ -143,6 +143,18 @@
   ${If} $JianxuDesktopChoice == ""
     StrCpy $JianxuDesktopChoice ${BST_CHECKED}
   ${EndIf}
+  ReadRegStr $JianxuStartMenuChoice SHELL_CONTEXT "${INSTALL_REGISTRY_KEY}" "StartMenuShortcut"
+  ${If} $JianxuStartMenuChoice == ""
+    StrCpy $JianxuStartMenuChoice ${BST_CHECKED}
+  ${EndIf}
+  ${If} ${Silent}
+    ${GetParameters} $R0
+    ${GetOptions} $R0 "--no-start-menu-shortcut" $R1
+    ${IfNot} ${Errors}
+      StrCpy $JianxuStartMenuChoice ${BST_UNCHECKED}
+    ${EndIf}
+    ClearErrors
+  ${EndIf}
   !insertmacro ProtectLegacyData HKCU
   !insertmacro ProtectLegacyData HKLM
   ReadRegStr $JianxuPerUserFolder HKCU "${INSTALL_REGISTRY_KEY}" "InstallLocation"
@@ -156,13 +168,37 @@
   System::Call 'shell32::SHChangeNotify(i 0x2000, i 0x1005, w "${link}", p 0)'
 !macroend
 
+!macro RemoveJianxuShortcut link
+  ${If} ${FileExists} "${link}"
+    WinShell::UninstShortcut "${link}"
+    Delete "${link}"
+  ${EndIf}
+!macroend
+
 !macro customInstall
-  ; The Start menu link and the app process share this notification identity.
+  ${If} $oldStartMenuLink != $newStartMenuLink
+    !insertmacro RemoveJianxuShortcut "$oldStartMenuLink"
+    !insertmacro cleanupOldMenuDirectory
+  ${EndIf}
+  ${If} $JianxuStartMenuChoice == ${BST_CHECKED}
+    !insertmacro createMenuDirectory
+    !insertmacro WriteJianxuShortcut "$newStartMenuLink"
+    StrCpy $launchLink "$newStartMenuLink"
+    Delete "$INSTDIR\resources\no-start-menu-shortcut"
+    DeleteRegKey SHELL_CONTEXT "Software\Classes\jianxu-reminder"
+  ${Else}
+    !insertmacro RemoveJianxuShortcut "$newStartMenuLink"
+    StrCpy $launchLink "$appExe"
+    ; The optional shortcut must stay absent even after sending notifications.
+    FileOpen $R8 "$INSTDIR\resources\no-start-menu-shortcut" w
+    FileClose $R8
+    WriteRegStr SHELL_CONTEXT "Software\Classes\jianxu-reminder" "" "URL:笺序提醒"
+    WriteRegStr SHELL_CONTEXT "Software\Classes\jianxu-reminder" "URL Protocol" ""
+    WriteRegStr SHELL_CONTEXT "Software\Classes\jianxu-reminder\shell\open\command" "" '"$appExe" "%1"'
+  ${EndIf}
+  WriteRegStr SHELL_CONTEXT "${INSTALL_REGISTRY_KEY}" "StartMenuShortcut" "$JianxuStartMenuChoice"
   WriteRegStr SHELL_CONTEXT "Software\Classes\AppUserModelId\${APP_ID}" "DisplayName" "${PRODUCT_NAME}"
   WriteRegStr SHELL_CONTEXT "Software\Classes\AppUserModelId\${APP_ID}" "IconUri" "$INSTDIR\resources\jianxu-notification.png"
-  !insertmacro createMenuDirectory
-  !insertmacro WriteJianxuShortcut "$newStartMenuLink"
-  StrCpy $launchLink "$newStartMenuLink"
   ${If} $oldDesktopLink != $newDesktopLink
   ${AndIf} ${FileExists} "$oldDesktopLink"
     WinShell::UninstShortcut "$oldDesktopLink"
@@ -191,9 +227,14 @@
       SetErrorLevel 2
       Quit
     ${EndIf}
+    !insertmacro RemoveJianxuShortcut "$oldStartMenuLink"
+    !insertmacro RemoveJianxuShortcut "$oldDesktopLink"
+    ${If} $oldMenuDirectory != ""
+      RMDir "$SMPROGRAMS\$oldMenuDirectory"
+    ${EndIf}
+    DeleteRegKey SHELL_CONTEXT "Software\Classes\jianxu-reminder"
+    ; Delete after WinShell removes the shortcuts to keep the app identity independent.
     DeleteRegKey SHELL_CONTEXT "Software\Classes\AppUserModelId\${APP_ID}"
-    WinShell::UninstShortcut "$oldDesktopLink"
-    Delete "$oldDesktopLink"
   ${EndIf}
 !macroend
 
