@@ -12,7 +12,7 @@ export function GameCalendar({cat,revision,onOpen,onManage}:{cat:string;revision
  const [viewportWidth,setViewportWidth]=useState(0)
  useEffect(()=>{let active=true;void call<GameCalendarData>('calendar',{cat,limit}).then(value=>{if(active){setData(value);setError('')}}).catch(e=>{if(active)setError((e as Error).message)});return ()=>{active=false}},[cat,limit,revision])
  const rawAxis=data?calendarAxis(data.games.flatMap(g=>g.group.version?[g.group.version]:[]),localZone(),55,true):null
- const axis=rawAxis?{...rawAxis,width:Math.max(1,viewportWidth-56)}:rawAxis
+ const axis=rawAxis?{...rawAxis,width:Math.max(1,viewportWidth-44)}:rawAxis
  useEffect(()=>{const el=horizontal.current;if(!el)return;const observer=new ResizeObserver(()=>setViewportWidth(el.clientWidth));observer.observe(el);setViewportWidth(el.clientWidth);return ()=>observer.disconnect()},[!!data,cat])
  const open=async(event:CalendarEvent)=>{if(event.preview){setSelected(event);return}try{const task=await call<Task|undefined>('detail',{id:event.task.id});if(task)onOpen(task);else setError('该活动已删除或已轮换，请刷新日历')}catch(e){setError((e as Error).message)}}
  if(!data)return <p className="progress" role={error?'alert':'status'}>{error||'正在读取版本活动…'}</p>
