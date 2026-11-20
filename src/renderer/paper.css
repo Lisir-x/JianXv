@@ -1,0 +1,72 @@
+/* Paper tones from the app icon; ink colors also identify interaction and status. */
+:root {
+  --ink: #382b22;
+  --ink-deep: #50392c;
+  --ink-muted: #6f5a48;
+  --ink-accent: #694638;
+  --ink-clear: #69463844;
+  --on-accent: #fffbf2;
+  --paper: #f8f2e6;
+  --paper-raised: #fffbf2;
+  --paper-rail: #f0e4d2;
+  --paper-inset: #f4eadb;
+  --paper-wash: #f1e6d5;
+  --paper-nearest: #f7edd9;
+  --line: #dfceb8;
+  --line-fold: #d6bea0;
+  --line-strong: #ab8d6f;
+  --line-faint: #b69d814d;
+  --accent-fill: #ead6b9;
+  --accent-context: #efe0c9;
+  --accent-chip: #e4cdac;
+  --nav-hover: #e9ddcb;
+  --nav-control-hover: #dac6ad;
+  --seal: #983d36;
+  --seal-wash: #f7e6df;
+  --seal-edge: #dfb9ad;
+  --jade: #3d5b43;
+  --jade-wash: #e8eddf;
+  --jade-edge: #becdb8;
+  --ochre: #765019;
+  --ochre-wash: #f6e9cf;
+  --shadow-faint: #5c3b2510;
+  --shadow: #4c322b2e;
+  --scrim: #36271f66;
+  --paper-serif: 'Songti SC', 'STSong', 'Noto Serif CJK SC', 'SimSun', Georgia, serif;
+}
+
+.brand, h1, .section-heading h2 {
+  font-family: var(--paper-serif);
+}
+
+.brand {
+  color: var(--ink-accent);
+  font-weight: 600;
+}
+
+aside {
+  background-image:
+    radial-gradient(ellipse at top left, #fff8eaaf, transparent 72%),
+    linear-gradient(160deg, #fff3de00 36%, #d8bc9240);
+}
+
+.task-row, .hero, .summary-row, .home-stats, .settings-group, .calendar-unconfigured {
+  background-image: linear-gradient(156deg, #fff9 0%, #fff0 45%, #e9d4ad16 100%);
+}
+
+.module-nearest {
+  background-image: linear-gradient(153deg, #fffcf37d, #fff0 46%, #d8bc922d);
+}
+
+.task-row:where(:not(.module-nearest)), .home-stats, .settings-group {
+  box-shadow: 0 1px 3px var(--shadow-faint);
+}
+
+.primary {
+  background-image: linear-gradient(135deg, #faedcd18, #382b2224);
+}
+
+.badge.pending {
+  background: var(--ochre-wash);
+  color: var(--ochre);
+}

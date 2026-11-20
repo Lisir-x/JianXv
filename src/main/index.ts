@@ -73,7 +73,7 @@ else {
     const timer:{current?:ReturnType<typeof setInterval>}={}
     app.on('will-quit',()=>{if(timer.current)clearInterval(timer.current);recovery.cancel();liveNotifications.forEach(n=>n.close());tray?.destroy();db.close()})
     Menu.setApplicationMenu(null)
-    win=new BrowserWindow({width:1160,height:820,minWidth:720,minHeight:600,show:!test&&!process.argv.includes('--background'),backgroundColor:'#f7f8fa',icon:join(app.getAppPath(),'assets','icon.png'),webPreferences:{preload:join(__dirname,'../preload/index.js'),contextIsolation:true,nodeIntegration:false,sandbox:true,backgroundThrottling:!test}})
+    win=new BrowserWindow({width:1160,height:820,minWidth:720,minHeight:600,show:!test&&!process.argv.includes('--background'),backgroundColor:'#f8f2e6',icon:join(app.getAppPath(),'assets','icon.png'),webPreferences:{preload:join(__dirname,'../preload/index.js'),contextIsolation:true,nodeIntegration:false,sandbox:true,backgroundThrottling:!test}})
     win.webContents.setWindowOpenHandler(()=>({action:'deny'}))
     win.webContents.on('will-navigate',e=>e.preventDefault())
     win.on('close',e=>{if(!quitting){e.preventDefault();win?.hide();if(!db.read().settings.trayExplained){if(!test)tray?.displayBalloon({title:'笺序已在后台运行',content:'仍会按时提醒。通过托盘菜单可以打开窗口或退出应用。'});db.mutate(s=>{s.settings.trayExplained=true})}}})
