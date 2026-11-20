@@ -1,3 +1,11 @@
+@font-face {
+  font-family: 'Jianxu Serif';
+  src: url('./fonts/NotoSerifSC.woff2') format('woff2');
+  font-style: normal;
+  font-weight: 500 750;
+  font-display: swap;
+}
+
 /* Paper tones from the app icon; ink colors also identify interaction and status. */
 :root {
   --ink: #382b22;
@@ -32,16 +40,31 @@
   --shadow-faint: #5c3b2510;
   --shadow: #4c322b2e;
   --scrim: #36271f66;
-  --paper-serif: 'Songti SC', 'STSong', 'Noto Serif CJK SC', 'SimSun', Georgia, serif;
+  --paper-serif: 'Jianxu Serif', 'Noto Serif SC', 'Microsoft YaHei UI', serif;
+  --paper-sans: 'Segoe UI', 'Microsoft YaHei UI', 'Microsoft YaHei', sans-serif;
+  font-family: var(--paper-sans);
 }
 
-.brand, h1, .section-heading h2 {
+.brand, h1, h2, .task-name {
   font-family: var(--paper-serif);
+  font-weight: 700;
+}
+
+.brand, h1 {
+  font-weight: 750;
 }
 
 .brand {
   color: var(--ink-accent);
+}
+
+.eyebrow, .card-top, .settings-category, .empty-nearest-label {
+  font-family: var(--paper-serif);
   font-weight: 600;
+}
+
+.card-time, .overview-count strong, .filter-count, .calendar-bar-dates {
+  font-variant-numeric: tabular-nums;
 }
 
 aside {
@@ -62,9 +85,6 @@ aside {
   box-shadow: 0 1px 3px var(--shadow-faint);
 }
 
-.primary {
-  background-image: linear-gradient(135deg, #faedcd18, #382b2224);
-}
 
 .badge.pending {
   background: var(--ochre-wash);

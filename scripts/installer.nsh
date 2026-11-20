@@ -65,6 +65,22 @@
   ReadRegStr $JianxuPerMachineFolder HKLM "${INSTALL_REGISTRY_KEY}" "InstallLocation"
 !macroend
 
+
+!macro RefreshJianxuShortcut link
+  ${If} ${FileExists} "${link}"
+    CreateShortCut "${link}" "$appExe" "" "$INSTDIR\resources\jianxu-taskbar.ico" 0 "" "" "${APP_DESCRIPTION}"
+    WinShell::SetLnkAUMI "${link}" "${APP_ID}"
+    System::Call 'shell32::SHChangeNotify(i 0x2000, i 0x1005, w "${link}", p 0)'
+  ${EndIf}
+!macroend
+
+!macro customInstall
+  !insertmacro RefreshJianxuShortcut "$newStartMenuLink"
+  ${IfNot} ${isNoDesktopShortcut}
+    !insertmacro RefreshJianxuShortcut "$newDesktopLink"
+  ${EndIf}
+!macroend
+
 !macro customUnInstall
   ${IfNot} ${isUpdated}
     ClearErrors

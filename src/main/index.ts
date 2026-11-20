@@ -9,6 +9,7 @@ import { Recovery } from './recovery'
 import { restoreDamagedDatabase } from './startup'
 import {removeManagedData} from './uninstall-data'
 import {startupDataLocation,copyData,saveLocation,migrateData,isWithin} from './location'
+import {setWindowsTaskbarIcon} from './windows-taskbar'
 import type { TaskInput,Notice } from '../shared/types'
 const test=process.env.TODO_TEST==='1'
 const testHome=test?process.env.TODO_HOME:undefined
@@ -19,8 +20,9 @@ const locationHome=dataOverride||programHome
 const profileId=createHash('sha256').update(process.platform==='win32'?programHome.toLowerCase():programHome).digest('hex').slice(0,16)
 const legacyRoot=join(app.getPath('appData'),'PersonalTodo',app.isPackaged?'data-user':'development')
 app.setPath('userData',test?join(dataOverride||testHome||locationHome,'profile'):join(localAppData,'PersonalTodo','profiles',profileId))
-app.setName('笺序')
-app.setAppUserModelId('local.personal.todo')
+const applicationName='笺序',appId='local.personal.todo'
+app.setName(applicationName)
+app.setAppUserModelId(appId)
 let win:BrowserWindow|null=null,tray:Tray|null=null,quitting=false
 const removing=(app.isPackaged||test)&&process.argv.includes('--remove-app-data')
 if(!app.requestSingleInstanceLock())app.exit(removing?1:0)
@@ -73,7 +75,15 @@ else {
     const timer:{current?:ReturnType<typeof setInterval>}={}
     app.on('will-quit',()=>{if(timer.current)clearInterval(timer.current);recovery.cancel();liveNotifications.forEach(n=>n.close());tray?.destroy();db.close()})
     Menu.setApplicationMenu(null)
-    win=new BrowserWindow({width:1160,height:820,minWidth:720,minHeight:600,show:!test&&!process.argv.includes('--background'),backgroundColor:'#f8f2e6',icon:join(app.getAppPath(),'assets','icon.png'),webPreferences:{preload:join(__dirname,'../preload/index.js'),contextIsolation:true,nodeIntegration:false,sandbox:true,backgroundThrottling:!test}})
+    const icon=process.platform==='win32'?(app.isPackaged?join(process.resourcesPath,'jianxu-taskbar.ico'):join(app.getAppPath(),'assets','icon.ico')):join(app.getAppPath(),'assets','icon.png')
+    win=new BrowserWindow({width:1160,height:820,minWidth:720,minHeight:600,show:false,backgroundColor:'#f8f2e6',icon,webPreferences:{preload:join(__dirname,'../preload/index.js'),contextIsolation:true,nodeIntegration:false,sandbox:true,backgroundThrottling:!test}})
+    if(process.platform==='win32'){
+      const exe=app.getPath('exe')
+      const pinnedDir=test?(dataOverride&&join(dataOverride,'pinned-taskbar')):app.isPackaged?join(app.getPath('appData'),'Microsoft','Internet Explorer','Quick Launch','User Pinned','TaskBar'):undefined
+      const relaunchArgs=app.isPackaged?[]:[app.getAppPath()]
+      setWindowsTaskbarIcon(win,{appId,name:applicationName,exe,icon,pinnedDir,relaunchArgs})
+    }
+    if(!test&&!process.argv.includes('--background'))win.show()
     win.webContents.setWindowOpenHandler(()=>({action:'deny'}))
     win.webContents.on('will-navigate',e=>e.preventDefault())
     win.on('close',e=>{if(!quitting){e.preventDefault();win?.hide();if(!db.read().settings.trayExplained){if(!test)tray?.displayBalloon({title:'笺序已在后台运行',content:'仍会按时提醒。通过托盘菜单可以打开窗口或退出应用。'});db.mutate(s=>{s.settings.trayExplained=true})}}})

@@ -77,6 +77,14 @@
     "afterPack": "./scripts/trim-windows-package.cjs",
     "extraResources": [
       {
+        "from": "assets/icon.ico",
+        "to": "jianxu-taskbar.ico"
+      },
+      {
+        "from": "src/renderer/fonts/OFL-NotoSerifSC.txt",
+        "to": "licenses/OFL-NotoSerifSC.txt"
+      },
+      {
         "from": "node_modules/react/LICENSE",
         "to": "licenses/react.txt"
       },

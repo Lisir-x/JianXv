@@ -1,0 +1,80 @@
+/* Action shapes stay in place; the rim and the ink change across states. */
+:is(.workspace, .modal) button:where(:not(.task-open, .calendar-event-bar, .quiet, .text, .overdue-toggle, .list-return, .check)) {
+  --control-edge: #c9ae8f;
+  --control-highlight: #fffcf4;
+  --control-face: #efdfc8;
+  --control-rim: #8b62442a;
+  --control-hover-face: #e9d2b2;
+  --control-hover-edge: #a5815f;
+  border-color: var(--control-edge);
+  background: linear-gradient(180deg, var(--control-highlight), var(--control-face));
+  box-shadow: inset 0 0 0 1px #fff8, inset 0 -2px var(--control-rim), 0 1px 2px #51332318;
+}
+
+:is(.workspace, .modal) button.primary {
+  --control-edge: #593428;
+  --control-highlight: #85533d;
+  --control-face: #5d382b;
+  --control-rim: #321e1766;
+  --control-hover-face: #754735;
+  --control-hover-edge: #4b2d24;
+  font-weight: 600;
+  box-shadow: inset 0 0 0 1px #f1cca565, inset 0 -2px var(--control-rim), 0 2px 4px #5133232e;
+}
+
+:is(.workspace, .modal) button.danger {
+  --control-edge: var(--seal-edge);
+  --control-highlight: #fff8ef;
+  --control-face: var(--seal-wash);
+  --control-hover-face: #f0d5c9;
+  --control-hover-edge: #b06655;
+}
+
+:is(.workspace, .modal) button:where(:not(.task-open, .calendar-event-bar, .quiet, .text, .overdue-toggle, .list-return, .check)):hover:enabled {
+  border-color: var(--control-hover-edge);
+  background: linear-gradient(180deg, var(--control-highlight), var(--control-hover-face));
+}
+
+:is(.workspace, .modal) button:where(:not(.task-open, .calendar-event-bar, .quiet, .text, .overdue-toggle, .list-return, .check)):active:enabled {
+  box-shadow: inset 0 2px 4px #51332340;
+}
+
+.workspace .calendar-entry[aria-pressed=true], .workspace .filters button[aria-pressed=true] {
+  border-color: #b7926d;
+  background: linear-gradient(180deg, #f5e5cb, #e7ccaa);
+  box-shadow: inset 0 0 0 1px #fff5, inset 0 -2px #91613936;
+}
+
+.workspace .filters button:not([aria-pressed=true]), .modal .calendar-grid button:not([aria-pressed=true]) {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.workspace .filters button:not([aria-pressed=true]):hover, .modal .calendar-grid button:not([aria-pressed=true]):hover, .quiet:hover:enabled {
+  background: var(--paper-wash);
+  border-color: var(--line-fold);
+}
+
+.modal .calendar-grid button[aria-pressed=true] {
+  border-color: #593428;
+  background: linear-gradient(180deg, #85533d, #5d382b);
+  box-shadow: inset 0 0 0 1px #f1cca565;
+}
+
+.workspace .task-row .check {
+  border-color: var(--line-strong);
+  background: linear-gradient(150deg, #fffcf4, #efdfc8);
+  box-shadow: inset 0 0 0 1px #fff8;
+}
+
+.workspace .task-row .check:hover {
+  border-color: var(--ink-accent);
+  background: var(--accent-fill);
+}
+
+.workspace .task-row:has(.badge.done) .check {
+  border-color: var(--jade);
+  background: var(--jade-wash);
+  color: var(--jade);
+}

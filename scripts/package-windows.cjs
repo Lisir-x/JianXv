@@ -1,5 +1,5 @@
 const { build, Platform, Arch } = require('electron-builder')
-const { existsSync, mkdirSync, mkdtempSync, renameSync, rmdirSync } = require('node:fs')
+const { existsSync, mkdirSync, mkdtempSync, renameSync, rmSync, rmdirSync } = require('node:fs')
 const { join, resolve } = require('node:path')
 
 async function main() {
@@ -27,7 +27,11 @@ async function main() {
       publish: 'never',
     })
     if (unpackOnly) console.log(unpacked)
-    else if (!artifacts.includes(join(release, '笺序 Setup.exe'))) throw Error('Windows installer was not produced')
+    else {
+      if (!artifacts.includes(join(release, '笺序 Setup.exe'))) throw Error('Windows installer was not produced')
+      // The app is offline and does not distribute update metadata.
+      rmSync(join(release, 'latest.yml'), { force: true })
+    }
   } finally {
     if (saved.length) mkdirSync(unpacked, { recursive: true })
     for (const name of saved) {
