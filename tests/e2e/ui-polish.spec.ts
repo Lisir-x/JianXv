@@ -29,11 +29,11 @@ test('Windows 任务栏只刷新属于笺序的旧固定快捷方式',async()=>{
   await page.waitForSelector('nav')
   const [ours,other]=await app.evaluate(({shell},pins)=>['笺序.lnk','其他应用.lnk'].map(file=>shell.readShortcutLink(`${pins}\\${file}`)),pins)
   const icon=resolve(packaged?'release/win-unpacked/resources/jianxu-taskbar.ico':'assets/icon.ico')
-  expect(ours).toMatchObject({icon,iconIndex:0,appUserModelId:'local.personal.todo',args:'--background',description:'Test shortcut'})
+  expect(ours).toMatchObject({icon,iconIndex:0,appUserModelId:'Jianxu.PaperTaskbar',args:'--background',description:'Test shortcut'})
   expect(other).toMatchObject({icon:'',appUserModelId:'com.example.other',args:'--background'})
   if(packaged){
    const legacy=await app.evaluate(({shell},pins)=>shell.readShortcutLink(`${pins}\\旧版笺序.lnk`),pins)
-   expect(legacy).toMatchObject({target:executablePath,icon,iconIndex:0,appUserModelId:'local.personal.todo',cwd:resolve('release/win-unpacked')})
+   expect(legacy).toMatchObject({target:executablePath,icon,iconIndex:0,appUserModelId:'Jianxu.PaperTaskbar',cwd:resolve('release/win-unpacked')})
   }
  }finally{await app.close()}
 })

@@ -22,7 +22,7 @@
     "luxon": "^3.7.2"
   },
   "build": {
-    "appId": "local.personal.todo",
+    "appId": "Jianxu.PaperTaskbar",
     "productName": "笺序",
     "directories": {
       "output": "release"
@@ -57,6 +57,7 @@
       ]
     },
     "nsis": {
+      "guid": "c79f6fae-2fb7-5884-b678-ded7b129709a",
       "artifactName": "笺序 Setup.${ext}",
       "oneClick": false,
       "perMachine": false,

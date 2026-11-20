@@ -4,4 +4,6 @@ import { App } from './App'
 import './style.css'
 import './paper.css'
 import './paper-controls.css'
+import './paper-sidebar.css'
+import './paper-toast.css'
 createRoot(document.getElementById('root')!).render(<App/> )

@@ -9,7 +9,7 @@ import { Recovery } from './recovery'
 import { restoreDamagedDatabase } from './startup'
 import {removeManagedData} from './uninstall-data'
 import {startupDataLocation,copyData,saveLocation,migrateData,isWithin} from './location'
-import {setWindowsTaskbarIcon} from './windows-taskbar'
+import {refreshPinnedTaskbarIcons} from './windows-taskbar'
 import type { TaskInput,Notice } from '../shared/types'
 const test=process.env.TODO_TEST==='1'
 const testHome=test?process.env.TODO_HOME:undefined
@@ -20,9 +20,10 @@ const locationHome=dataOverride||programHome
 const profileId=createHash('sha256').update(process.platform==='win32'?programHome.toLowerCase():programHome).digest('hex').slice(0,16)
 const legacyRoot=join(app.getPath('appData'),'PersonalTodo',app.isPackaged?'data-user':'development')
 app.setPath('userData',test?join(dataOverride||testHome||locationHome,'profile'):join(localAppData,'PersonalTodo','profiles',profileId))
-const applicationName='笺序',appId='local.personal.todo'
+const applicationName='笺序',appId='Jianxu.PaperTaskbar'
 app.setName(applicationName)
-app.setAppUserModelId(appId)
+// Keep the existing notification identity; the visible window has a separate shell group.
+app.setAppUserModelId('local.personal.todo')
 let win:BrowserWindow|null=null,tray:Tray|null=null,quitting=false
 const removing=(app.isPackaged||test)&&process.argv.includes('--remove-app-data')
 if(!app.requestSingleInstanceLock())app.exit(removing?1:0)
@@ -35,7 +36,6 @@ else if(removing){
  }catch(e){console.error(e);app.exit(1)}
 }
 else {
-  app.on('second-instance',()=>{win?.show();win?.focus()})
   app.whenReady().then(async()=>{
     let dataRoot:string
     try{
@@ -62,7 +62,24 @@ else {
     let notificationShows=0,notificationFailures=0
     const liveNotifications=new Set<Notification>()
     const notifyChanged=(event:object={})=>win?.webContents.send('todo:changed',event)
-    const show=()=>{if(win?.isMinimized())win.restore();win?.show();win?.focus()}
+    let taskbarReady=false
+    let windowReady=false
+    let pendingShow=false
+    const show=()=>{
+      if(!win||!windowReady){pendingShow=true;return}
+      if(win.isMinimized())win.restore()
+      if(process.platform==='win32'&&!taskbarReady){
+        // Keep the native taskbar tab detached until its first visible icon is set.
+        win.setSkipTaskbar(true)
+        win.show()
+        win.setIcon(icon)
+        win.setAppDetails(taskbarDetails)
+        win.setSkipTaskbar(false)
+        taskbarReady=true
+      }else win.show()
+      win.focus()
+    }
+    app.on('second-instance',show)
     const scheduler=new Scheduler(service,(notice:Notice)=>{
       if(!Notification.isSupported())throw Error('此系统不支持通知')
       const n=new Notification({title:notice.kind==='study'?'待办提醒':'游戏活动提醒',body:notice.name+' · '+service.groupName(notice.cat),silent:false})
@@ -76,14 +93,10 @@ else {
     app.on('will-quit',()=>{if(timer.current)clearInterval(timer.current);recovery.cancel();liveNotifications.forEach(n=>n.close());tray?.destroy();db.close()})
     Menu.setApplicationMenu(null)
     const icon=process.platform==='win32'?(app.isPackaged?join(process.resourcesPath,'jianxu-taskbar.ico'):join(app.getAppPath(),'assets','icon.ico')):join(app.getAppPath(),'assets','icon.png')
-    win=new BrowserWindow({width:1160,height:820,minWidth:720,minHeight:600,show:false,backgroundColor:'#f8f2e6',icon,webPreferences:{preload:join(__dirname,'../preload/index.js'),contextIsolation:true,nodeIntegration:false,sandbox:true,backgroundThrottling:!test}})
-    if(process.platform==='win32'){
-      const exe=app.getPath('exe')
-      const pinnedDir=test?(dataOverride&&join(dataOverride,'pinned-taskbar')):app.isPackaged?join(app.getPath('appData'),'Microsoft','Internet Explorer','Quick Launch','User Pinned','TaskBar'):undefined
-      const relaunchArgs=app.isPackaged?[]:[app.getAppPath()]
-      setWindowsTaskbarIcon(win,{appId,name:applicationName,exe,icon,pinnedDir,relaunchArgs})
-    }
-    if(!test&&!process.argv.includes('--background'))win.show()
+    const exe=app.getPath('exe')
+    // Explorer resolves the packaged relaunch icon from the executable resource.
+    const taskbarDetails={appId,appIconPath:app.isPackaged?exe:icon,appIconIndex:0,relaunchCommand:(app.isPackaged?[exe]:[exe,app.getAppPath()]).map(arg=>`"${arg}"`).join(' '),relaunchDisplayName:applicationName}
+    win=new BrowserWindow({skipTaskbar:process.platform==='win32',width:1160,height:820,minWidth:720,minHeight:600,show:false,backgroundColor:'#f8f2e6',icon,webPreferences:{preload:join(__dirname,'../preload/index.js'),contextIsolation:true,nodeIntegration:false,sandbox:true,backgroundThrottling:!test}})
     win.webContents.setWindowOpenHandler(()=>({action:'deny'}))
     win.webContents.on('will-navigate',e=>e.preventDefault())
     win.on('close',e=>{if(!quitting){e.preventDefault();win?.hide();if(!db.read().settings.trayExplained){if(!test)tray?.displayBalloon({title:'笺序已在后台运行',content:'仍会按时提醒。通过托盘菜单可以打开窗口或退出应用。'});db.mutate(s=>{s.settings.trayExplained=true})}}})
@@ -151,6 +164,13 @@ else {
     })
     if(process.env.ELECTRON_RENDERER_URL)await win.loadURL(process.env.ELECTRON_RENDERER_URL)
     else await win.loadFile(join(__dirname,'../renderer/index.html'))
+    if(process.platform==='win32'){
+      const pinnedDir=test?(dataOverride&&join(dataOverride,'pinned-taskbar')):app.isPackaged?join(app.getPath('appData'),'Microsoft','Internet Explorer','Quick Launch','User Pinned','TaskBar'):undefined
+      const relaunchArgs=app.isPackaged?[]:[app.getAppPath()]
+      refreshPinnedTaskbarIcons({appId,name:applicationName,exe,icon,pinnedDir,relaunchArgs})
+    }
+    windowReady=true
+    if(pendingShow||(!test&&!process.argv.includes('--background')))show()
     scan('missed')
     powerMonitor.on('resume',()=>{scan('missed');notifyChanged()})
     timer.current=setInterval(()=>{scan();notifyChanged()},15000)

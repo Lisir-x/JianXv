@@ -1,0 +1,59 @@
+.paper-sidebar {
+  border-right-color: #bea27e;
+  background-color: #eee0c9;
+  background-image: radial-gradient(ellipse at 0 5%, #fff8eabd, transparent 68%), linear-gradient(160deg, #fff0, #b8956140);
+  box-shadow: inset -3px 0 #8c5d3310, 3px 0 10px #6841200c;
+}
+
+.paper-sidebar .brand {
+  position: relative;
+  color: #623e30;
+}
+
+.paper-sidebar .brand::after {
+  content: '';
+  position: absolute;
+  height: 3px;
+  inset: auto 12px 12px;
+  border-block: 1px solid #a781563f;
+  pointer-events: none;
+}
+
+.brand-name { letter-spacing: .13em; }
+.sidebar-icon { width: 16px; height: 16px; flex: none; color: #805542; }
+
+.paper-sidebar nav > button, .paper-sidebar .nav-parent > button:first-child {
+  font-family: var(--paper-serif);
+  font-weight: 650;
+}
+
+.paper-sidebar nav > button, .paper-sidebar .nav-parent, .paper-sidebar .nav-child-row {
+  position: relative;
+}
+
+.paper-sidebar nav > button.active, .paper-sidebar .nav-parent.selected {
+  background-image: linear-gradient(175deg, #fff0d8ae, #c9956220);
+  box-shadow: inset 0 0 0 1px #a17a514a, 0 2px 3px #63422214;
+  color: #603527;
+}
+
+.paper-sidebar nav > button.active::before, .paper-sidebar .nav-parent.selected::before, .paper-sidebar .nav-child-row.selected::before {
+  content: '';
+  position: absolute;
+  inset: 10px auto 10px 2px;
+  width: 2px;
+  border-radius: 2px;
+  background: #9d493d;
+  pointer-events: none;
+}
+
+.paper-sidebar .nav-parent.context { box-shadow: inset 0 0 0 1px #a17a5122; }
+.paper-sidebar .nav-children { border-left-color: #ad8c67; }
+.paper-sidebar .nav-child-row { box-shadow: none; }
+.paper-sidebar .nav-child-row > .sub { font-family: var(--paper-serif); font-weight: 550; }
+.paper-sidebar .nav-child-row.selected > .sub { font-weight: 700; }
+.paper-sidebar .nav-child-row.selected { background-image: linear-gradient(100deg,#fff1dc72,transparent); }
+.paper-sidebar .nav-divider { background: linear-gradient(90deg,#9f764e66,#9f764e18); }
+.paper-sidebar .sidebar-footer { border-color: #ad8c6769; }
+.paper-sidebar .sidebar-exit { font-family: var(--paper-serif); font-weight: 600; box-shadow: inset 0 0 0 1px #ac88664f; }
+.paper-sidebar .sidebar-exit:hover { box-shadow: inset 0 0 0 1px #ac8866a6; }
