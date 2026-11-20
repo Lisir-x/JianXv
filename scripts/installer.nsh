@@ -105,6 +105,8 @@
 !macroend
 
 !macro customInstall
+  WriteRegStr SHELL_CONTEXT "Software\Classes\AppUserModelId\${APP_ID}" "DisplayName" "${PRODUCT_NAME}"
+  WriteRegStr SHELL_CONTEXT "Software\Classes\AppUserModelId\${APP_ID}" "IconUri" "$INSTDIR\resources\jianxu-taskbar.ico"
   ${If} $JianxuStartChoice == ${BST_CHECKED}
     CreateShortCut "$newStartMenuLink" "$appExe" "" "$INSTDIR\resources\jianxu-taskbar.ico" 0 "" "" "${APP_DESCRIPTION}"
     WinShell::SetLnkAUMI "$newStartMenuLink" "${APP_ID}"
@@ -133,6 +135,7 @@
       SetErrorLevel 2
       Quit
     ${EndIf}
+    DeleteRegKey SHELL_CONTEXT "Software\Classes\AppUserModelId\${APP_ID}"
   ${EndIf}
 !macroend
 
