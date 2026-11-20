@@ -3,7 +3,7 @@ import {mkdtempSync} from 'node:fs'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 
-test('侧栏宽度可调整并保存，首页总览保持固定',async()=>{
+test('侧栏宽度可调整并保存，仅首页标题栏固定',async()=>{
  const dir=mkdtempSync(join(tmpdir(),'todo-home-fixed-'))
  const app=await electron.launch({args:['.'],env:{...process.env,TODO_TEST:'1',TODO_DATA_DIR:dir}})
  try{
@@ -25,9 +25,11 @@ test('侧栏宽度可调整并保存，首页总览保持固定',async()=>{
   await handle.focus();await page.keyboard.press('ArrowLeft')
   await expect(handle).toHaveAttribute('aria-valuenow','300')
   const fixed=await page.locator('.home-fixed').boundingBox()
+  const overview=await page.locator('.home-overview').boundingBox()
   await page.locator('.home-scroll').hover();await page.mouse.wheel(0,700)
   await expect.poll(()=>page.locator('.home-scroll').evaluate(el=>el.scrollTop)).toBeGreaterThan(100)
   expect(await page.locator('.home-fixed').boundingBox()).toEqual(fixed)
+  expect((await page.locator('.home-overview').boundingBox())!.y).toBeLessThan(overview!.y-100)
   expect(await page.evaluate(()=>window.scrollY)).toBe(0)
   await app.evaluate(({BrowserWindow})=>BrowserWindow.getAllWindows()[0].setSize(720,600))
   await expect.poll(()=>page.locator('.home-scroll').evaluate(el=>el.clientHeight)).toBeGreaterThan(100)

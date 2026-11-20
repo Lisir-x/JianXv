@@ -27,13 +27,14 @@ export function validateState(s:State){
 }
 export class Store {
   db:Database.Database
-  constructor(readonly path:string){
-    mkdirSync(dirname(path),{recursive:true});const existed=existsSync(path)
-    this.db=new Database(path)
+  constructor(readonly path:string,readonlyMode=false){
+    if(!readonlyMode)mkdirSync(dirname(path),{recursive:true})
+    const existed=existsSync(path)
+    this.db=new Database(path,{readonly:readonlyMode,fileMustExist:readonlyMode})
     try{
       if(existed){const meta=this.db.prepare('SELECT * FROM metadata WHERE id=1').get() as any;if(meta?.app!==APP_ID||meta.version!==SCHEMA)throw Error('不支持的数据文件或版本');if(this.db.pragma('quick_check',{simple:true})!=='ok')throw Error('数据库完整性检查失败');validateState(this.read())}
       else{this.db.exec(`CREATE TABLE metadata(id INTEGER PRIMARY KEY CHECK(id=1),app TEXT NOT NULL,version INTEGER NOT NULL,backupAt INTEGER); CREATE TABLE documents(kind TEXT NOT NULL,id TEXT NOT NULL,payload TEXT NOT NULL,PRIMARY KEY(kind,id));CREATE INDEX documents_kind ON documents(kind);`);this.db.prepare('INSERT INTO metadata VALUES(1,?,?,NULL)').run(APP_ID,SCHEMA);this.write(initialState())}
-      this.db.pragma('journal_mode = WAL');this.db.pragma('synchronous = FULL')
+      if(!readonlyMode){this.db.pragma('journal_mode = WAL');this.db.pragma('synchronous = FULL')}
     }catch(e){this.db.close();throw Error(`无法打开本地数据 ${path}：${e instanceof Error?e.message:String(e)}`,{cause:e})}
   }
   read():State {

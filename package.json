@@ -13,15 +13,13 @@
     "lint": "eslint src tests --max-warnings 0",
     "test": "vitest run",
     "test:e2e": "npm run build && playwright test",
-    "dist:win": "npm run build && electron-builder --win nsis --x64",
-    "pack": "npm run build && electron-builder --dir --win --x64",
+    "dist:win": "npm run build && node scripts/package-windows.cjs",
+    "pack": "npm run build && node scripts/package-windows.cjs --dir",
     "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
     "better-sqlite3": "^13.2.0",
-    "luxon": "^3.7.2",
-    "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "luxon": "^3.7.2"
   },
   "build": {
     "appId": "local.personal.todo",
@@ -32,10 +30,19 @@
     "files": [
       "out/**/*",
       "package.json",
-      "assets/**/*"
+      "assets/{icon,tray}.png",
+      "!**/*.map",
+      "!node_modules/better-sqlite3/{build,deps,src}/**",
+      "!node_modules/better-sqlite3/binding.gyp",
+      "!node_modules/better-sqlite3/prebuilds/!(win32-x64.node)",
+      "!node_modules/better-sqlite3/lib/{darwin,linux,linuxmusl}-*.js",
+      "!node_modules/better-sqlite3/lib/win32-arm64.js",
+      "!node_modules/node-addon-api/**",
+      "!node_modules/luxon/src/**",
+      "!node_modules/luxon/build/{amd,cjs-browser,es6,global}/**"
     ],
     "asarUnpack": [
-      "node_modules/better-sqlite3/**"
+      "node_modules/better-sqlite3/prebuilds/win32-x64.node"
     ],
     "win": {
       "target": [
@@ -43,7 +50,11 @@
       ],
       "signAndEditExecutable": true,
       "icon": "assets/icon.ico",
-      "signExecutable": false
+      "signExecutable": false,
+      "electronLanguages": [
+        "zh-CN",
+        "en-US"
+      ]
     },
     "nsis": {
       "artifactName": "我的待办 Setup.${ext}",
@@ -53,10 +64,31 @@
       "createDesktopShortcut": true,
       "deleteAppDataOnUninstall": false,
       "packElevateHelper": false,
-      "allowElevation": false
+      "allowElevation": false,
+      "differentialPackage": false,
+      "include": "scripts/installer.nsh"
     },
     "electronDist": "node_modules/electron/dist",
-    "npmRebuild": false
+    "npmRebuild": false,
+    "compression": "maximum",
+    "asar": {
+      "smartUnpack": false
+    },
+    "afterPack": "./scripts/trim-windows-package.cjs",
+    "extraResources": [
+      {
+        "from": "node_modules/react/LICENSE",
+        "to": "licenses/react.txt"
+      },
+      {
+        "from": "node_modules/react-dom/LICENSE",
+        "to": "licenses/react-dom.txt"
+      },
+      {
+        "from": "node_modules/scheduler/LICENSE",
+        "to": "licenses/scheduler.txt"
+      }
+    ]
   },
   "devDependencies": {
     "electron": "45.3.4",
@@ -73,6 +105,8 @@
     "electron-builder": "26.18.0",
     "eslint": "10.15.0",
     "@eslint/js": "10.0.1",
-    "typescript-eslint": "8.73.0"
+    "typescript-eslint": "8.73.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1"
   }
 }

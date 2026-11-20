@@ -1,32 +1,50 @@
 import { app,BrowserWindow,Tray,Menu,nativeImage,Notification,ipcMain,powerMonitor,dialog } from 'electron'
 import { join,dirname } from 'node:path'
-import { mkdirSync,writeFileSync,existsSync } from 'node:fs'
+import { createHash } from 'node:crypto'
+import { writeFileSync,existsSync } from 'node:fs'
 import { Store } from './store'
 import { Service } from './service'
 import { Scheduler } from './scheduler'
 import { Recovery } from './recovery'
 import { restoreDamagedDatabase } from './startup'
-import {dataLocation,copyData,saveLocation} from './location'
+import {removeManagedData} from './uninstall-data'
+import {startupDataLocation,copyData,saveLocation,migrateData,isWithin} from './location'
 import type { TaskInput,Notice } from '../shared/types'
 const test=process.env.TODO_TEST==='1'
-const locationHome=test&&process.env.TODO_HOME?process.env.TODO_HOME:app.isPackaged?dirname(app.getPath('exe')):app.getAppPath()
+const testHome=test?process.env.TODO_HOME:undefined
+const dataOverride=test?process.env.TODO_DATA_DIR:undefined
+const programHome=testHome?join(testHome,'program'):app.isPackaged?dirname(app.getPath('exe')):app.getAppPath()
+const localAppData=process.env.LOCALAPPDATA||join(dirname(app.getPath('appData')),'Local')
+const locationHome=dataOverride||programHome
+const profileId=createHash('sha256').update(process.platform==='win32'?programHome.toLowerCase():programHome).digest('hex').slice(0,16)
 const legacyRoot=join(app.getPath('appData'),'PersonalTodo',app.isPackaged?'data-user':'development')
-if(process.env.TODO_DATA_DIR)app.setPath('userData',process.env.TODO_DATA_DIR)
-else app.setPath('userData',dataLocation(locationHome))
+app.setPath('userData',test?join(dataOverride||testHome||locationHome,'profile'):join(localAppData,'PersonalTodo','profiles',profileId))
 app.setName('我的待办')
 app.setAppUserModelId('local.personal.todo')
 let win:BrowserWindow|null=null,tray:Tray|null=null,quitting=false
-if(!app.requestSingleInstanceLock())app.quit()
+const removing=(app.isPackaged||test)&&process.argv.includes('--remove-app-data')
+if(!app.requestSingleInstanceLock())app.exit(removing?1:0)
+else if(removing){
+ try{
+  app.releaseSingleInstanceLock()
+  removeManagedData(locationHome,app.getPath('userData'),test?undefined:legacyRoot)
+  if(!test&&app.getLoginItemSettings({path:app.getPath('exe'),args:['--background']}).openAtLogin)app.setLoginItemSettings({openAtLogin:false,path:app.getPath('exe'),args:['--background']})
+  app.exit(0)
+ }catch(e){console.error(e);app.exit(1)}
+}
 else {
   app.on('second-instance',()=>{win?.show();win?.focus()})
   app.whenReady().then(async()=>{
-    const legacyDb=join(legacyRoot,'data','app.sqlite')
-    if(!test&&!process.env.TODO_DATA_DIR&&!existsSync(join(app.getPath('userData'),'data','app.sqlite'))&&existsSync(legacyDb)){
-      const choice=await dialog.showMessageBox({type:'question',message:'发现旧版数据，是否复制到新的数据目录？',detail:'原数据会保留：'+legacyDb,buttons:['复制旧数据','暂不迁移'],defaultId:0,cancelId:1})
-      if(choice.response===0){const old=new Store(legacyDb);try{mkdirSync(join(app.getPath('userData'),'data'),{recursive:true});await old.backup(join(app.getPath('userData'),'data','app.sqlite'))}finally{old.close()}}
-    }
-    mkdirSync(join(app.getPath('userData'),'data'),{recursive:true})
-    const dataPath=join(app.getPath('userData'),'data','app.sqlite')
+    let dataRoot:string
+    try{
+      dataRoot=dataOverride||await startupDataLocation(locationHome)
+      const legacyDb=join(legacyRoot,'data','app.sqlite')
+      if(!test&&dataRoot===locationHome&&!existsSync(join(dataRoot,'data'))&&existsSync(legacyDb)){
+        const choice=await dialog.showMessageBox({type:'question',message:'发现旧版数据，是否复制到新的数据目录？',detail:'原数据会保留：'+legacyDb,buttons:['复制旧数据','暂不迁移'],defaultId:0,cancelId:1})
+        if(choice.response===0){await migrateData(legacyDb,dataRoot);saveLocation(locationHome,dataRoot,[legacyRoot])}
+      }
+    }catch(e){dialog.showErrorBox('无法准备数据目录',(e as Error).message);app.quit();return}
+    const dataPath=join(dataRoot,'data','app.sqlite')
     let db:Store
     while(true){try{db=new Store(dataPath);break}catch(e){
       const choice=await dialog.showMessageBox({type:'error',title:'本地数据无法打开',message:'原文件已保留，可选择备份恢复。',detail:dataPath+'\n'+(e as Error).message,buttons:['选择备份恢复','退出应用'],defaultId:1,cancelId:1})
@@ -92,7 +110,7 @@ else {
             const choice=test&&payload.path?{canceled:false,filePaths:[String(payload.path)]}:await dialog.showOpenDialog(win!,{title:'选择空的数据目录',properties:['openDirectory','createDirectory']})
             if(choice.canceled){data=null;break}
             scheduler.paused=true;importing=true
-            try{const target=await copyData(db,choice.filePaths[0]);saveLocation(locationHome,target);data=target;if(!test){app.relaunch();quitting=true;setTimeout(()=>app.quit(),100)}}catch(e){importing=false;scheduler.paused=false;throw e}break
+            try{if(isWithin(programHome,choice.filePaths[0]))throw Error('请选择程序目录之外的空文件夹');const target=await copyData(db,choice.filePaths[0]);saveLocation(locationHome,target);data=target;if(!test){app.relaunch();quitting=true;setTimeout(()=>app.quit(),100)}}catch(e){importing=false;scheduler.paused=false;throw e}break
           }
           case 'export':{
             const choice=test&&payload.path?{canceled:false,filePath:String(payload.path)}:await dialog.showSaveDialog(win!,{title:'导出备份',defaultPath:`待办备份-${new Date().toISOString().replace(/[:.]/g,'-')}.sqlite`,filters:[{name:'SQLite 备份',extensions:['sqlite']}]})

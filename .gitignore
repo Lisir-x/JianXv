@@ -8,3 +8,4 @@ playwright-report/
 .npm-cache/
 我的待办数据/
 todo-location.json
+local-data-archive/
