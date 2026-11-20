@@ -1,10 +1,9 @@
 import React,{useEffect,useRef,useState} from 'react'
-import {createPortal} from 'react-dom'
 
 type ToastProps={message:string;revision:number;error?:boolean;onDismiss:()=>void;children?:React.ReactNode}
 
 export function Toast({revision,...notice}:ToastProps){
- return createPortal(<ToastNotice key={JSON.stringify([revision,notice.message,notice.error])} {...notice}/>,document.body)
+ return <ToastNotice key={JSON.stringify([revision,notice.message,notice.error])} {...notice}/>
 }
 
 function ToastNotice({message,error,onDismiss,children}:Omit<ToastProps,'revision'>){
