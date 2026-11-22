@@ -1,4 +1,4 @@
-import { app,BrowserWindow,Tray,Menu,nativeImage,Notification,ipcMain,powerMonitor,dialog } from 'electron'
+import { app,BrowserWindow,Tray,Menu,nativeImage,Notification,ipcMain,powerMonitor,dialog,shell } from 'electron'
 import { join,dirname } from 'node:path'
 import { createHash } from 'node:crypto'
 import { writeFileSync,existsSync } from 'node:fs'
@@ -11,6 +11,7 @@ import {removeManagedData} from './uninstall-data'
 import {startupDataLocation,copyData,saveLocation,migrateData,isWithin} from './location'
 import {refreshPinnedTaskbarIcons} from './windows-taskbar'
 import {reminderTaskFromArgs,showWindowsReminder,usesShortcutFreeReminders} from './windows-reminder'
+import {LocalUpdate,registeredInstallLocations,updateLocation} from './local-update'
 import type { TaskInput,Notice } from '../shared/types'
 const test=process.env.TODO_TEST==='1'
 const testHome=test?process.env.TODO_HOME:undefined
@@ -61,6 +62,7 @@ else {
     let testNow=test&&process.env.TODO_NOW?Number(process.env.TODO_NOW):null
     const service=new Service(db,()=>testNow??Date.now())
     const recovery=new Recovery(db,()=>service.now())
+    const localUpdate=new LocalUpdate(db,undefined,()=>service.now())
     let importing=false
     let notificationShows=0,notificationFailures=0
     const liveNotifications=new Set<Notification>()
@@ -111,7 +113,7 @@ else {
     const startupActual=()=>app.getLoginItemSettings({path:app.getPath('exe'),args:startupArgs}).openAtLogin
     const setStartup=(enabled:boolean)=>{app.setLoginItemSettings({openAtLogin:enabled,path:app.getPath('exe'),args:startupArgs});if(startupActual()!==enabled)throw Error('开机自启登记失败，请检查系统启动应用设置')}
     const timer:{current?:ReturnType<typeof setInterval>}={}
-    app.on('will-quit',()=>{if(timer.current)clearInterval(timer.current);recovery.cancel();liveNotifications.forEach(n=>n.close());tray?.destroy();db.close()})
+    app.on('will-quit',()=>{if(timer.current)clearInterval(timer.current);recovery.cancel();localUpdate.cancel();liveNotifications.forEach(n=>n.close());tray?.destroy();db.close()})
     Menu.setApplicationMenu(null)
     const icon=process.platform==='win32'?(app.isPackaged?join(process.resourcesPath,'jianxu-taskbar.ico'):join(app.getAppPath(),'assets','icon.ico')):join(app.getAppPath(),'assets','icon.png')
     const exe=app.getPath('exe')
@@ -150,6 +152,18 @@ else {
           case 'complete':data=service.complete(payload.id,payload.done);break
           case 'delete':data=service.delete(payload.id,payload.scope);break
           case 'readNotices':data=service.readNotices();break
+          case 'updateInfo':data={version:app.getVersion(),...updateLocation(programHome,registeredInstallLocations(),app.isPackaged)};break
+          case 'prepareLocalUpdate':{
+            localUpdate.cancel()
+            const choice=test&&payload.path?{canceled:false,filePaths:[String(payload.path)]}:await dialog.showOpenDialog(win!,{title:'选择已下载的笺序安装包',properties:['openFile'],filters:[{name:'Windows 安装程序',extensions:['exe']}]})
+            data=choice.canceled||!choice.filePaths[0]?null:await localUpdate.prepare(choice.filePaths[0]);break
+          }
+          case 'cancelLocalUpdate':localUpdate.cancel();data=true;break
+          case 'revealLocalUpdate':shell.showItemInFolder(localUpdate.reveal(payload.token));data=true;break
+          case 'startLocalUpdate':{
+            scheduler.paused=true;importing=true
+            try{data=await localUpdate.start(payload.token,updateLocation(programHome,registeredInstallLocations(),app.isPackaged));quitting=true;setTimeout(()=>app.quit(),300)}catch(e){importing=false;scheduler.paused=false;throw e}break
+          }
           case 'setSettings':{
             if(typeof payload.notification==='boolean')db.mutate(s=>{s.settings.notification=payload.notification})
             if(typeof payload.startup==='boolean'){setStartup(payload.startup);db.mutate(s=>{s.settings.startup=startupActual()})}
@@ -192,7 +206,7 @@ else {
             notifyChanged({taskId})
           }
         }
-        if(!['snapshot','health','detail','groupCounts','getGroup','calendar'].includes(action)){if(!['quit','openWindow'].includes(action))scan();notifyChanged()}
+        if(!['snapshot','health','detail','groupCounts','getGroup','calendar','updateInfo','prepareLocalUpdate','cancelLocalUpdate','revealLocalUpdate','startLocalUpdate'].includes(action)){if(!['quit','openWindow'].includes(action))scan();notifyChanged()}
         return {ok:true,data}
       }catch(e){return {ok:false,error:e instanceof Error?e.message:String(e)}}
     })
