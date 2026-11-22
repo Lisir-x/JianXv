@@ -13,6 +13,11 @@ aside>nav>button,aside>nav>.nav-divider{flex:none}
 .nav-rail .nav-scroll-thumb::after{content:'';position:absolute;inset:0 6px;background:#ab896a;border-radius:8px;transition:inset .15s,background .15s}
 .nav-subwrap:hover .nav-scroll-thumb::after,.nav-scroll-thumb:focus-visible::after{inset-inline:5px;background:var(--ink-accent)}
 .nav-scroll-thumb:active{cursor:grabbing}
+.ui-icon{width:16px;height:16px;flex:none;vertical-align:-3px;color:var(--ink-accent)}
+.topbar .quiet,.module-extra button,.routine-header .actions button,.routine-row button{display:inline-flex;align-items:center;gap:6px}
+.module-extra button[aria-pressed=true] .ui-icon{color:inherit}
+.module-overview h2,.routine-panel h3{display:flex;align-items:center;gap:7px}
+.overview-brief>.ui-icon{color:var(--ink-accent)}
 .home-scroll::-webkit-scrollbar,.module-scroll::-webkit-scrollbar,.calendar-content-scroll::-webkit-scrollbar,.modal::-webkit-scrollbar,main:not(.module-main)::-webkit-scrollbar{width:9px;height:9px}
 .home-scroll::-webkit-scrollbar-track,.module-scroll::-webkit-scrollbar-track,.calendar-content-scroll::-webkit-scrollbar-track,.modal::-webkit-scrollbar-track,main:not(.module-main)::-webkit-scrollbar-track{background:var(--paper-inset);border-radius:9px}
 .home-scroll::-webkit-scrollbar-thumb,.module-scroll::-webkit-scrollbar-thumb,.calendar-content-scroll::-webkit-scrollbar-thumb,.modal::-webkit-scrollbar-thumb,main:not(.module-main)::-webkit-scrollbar-thumb{background:#c6ab8e;border:2px solid var(--paper-inset);border-radius:9px}
