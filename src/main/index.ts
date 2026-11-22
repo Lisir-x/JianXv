@@ -140,6 +140,11 @@ else {
           case 'renameGroup':data=service.renameGroup(payload.id,payload.name);break
           case 'pinGroup':data=service.pinGroup(payload.id,payload.pinned);break
           case 'groupCounts':data=service.groupCounts(payload.id);break
+          case 'getGroup':data=db.read().groups.find(g=>g.id===payload.id);break
+          case 'setRoutineSettings':data=service.setRoutineSettings(payload.id,payload.settings);break
+          case 'saveRoutine':data=service.saveRoutine(payload.gameId,payload.name,payload.kind,payload.id);break
+          case 'completeRoutine':data=service.completeRoutine(payload.gameId,payload.id,payload.done);break
+          case 'deleteRoutine':data=service.deleteRoutine(payload.gameId,payload.id);break
           case 'deleteGroup':data=service.deleteGroup(payload.id);break
           case 'save':data=service.save(payload.input as TaskInput,payload.id,payload.scope);break
           case 'complete':data=service.complete(payload.id,payload.done);break
@@ -187,7 +192,7 @@ else {
             notifyChanged({taskId})
           }
         }
-        if(!['snapshot','health','detail','groupCounts','calendar'].includes(action)){if(!['quit','openWindow'].includes(action))scan();notifyChanged()}
+        if(!['snapshot','health','detail','groupCounts','getGroup','calendar'].includes(action)){if(!['quit','openWindow'].includes(action))scan();notifyChanged()}
         return {ok:true,data}
       }catch(e){return {ok:false,error:e instanceof Error?e.message:String(e)}}
     })

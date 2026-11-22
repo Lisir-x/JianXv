@@ -1,9 +1,10 @@
-import React,{useId,useRef,useState} from 'react'
+import React,{useEffect,useId,useRef,useState} from 'react'
 import {createPortal} from 'react-dom'
 import type {Group} from '../shared/types'
 export type GroupAction='rename'|'pin'|'delete'|'version'
 export function SubmoduleMenu({group,onAction}:{group:Group;onAction:(action:GroupAction,group:Group)=>void}){
  const id=useId(),trigger=useRef<HTMLButtonElement>(null),menu=useRef<HTMLDivElement>(null),[open,setOpen]=useState(false)
+ useEffect(()=>{if(!open)return;const closeOnScroll=(event:Event)=>{if((event.target as Element)?.closest?.('.nav-children')){menu.current?.hidePopover();setOpen(false)}};document.addEventListener('scroll',closeOnScroll,true);return()=>document.removeEventListener('scroll',closeOnScroll,true)},[open])
  const close=()=>{menu.current?.hidePopover();setOpen(false);trigger.current?.focus()}
  const action=(value:GroupAction)=>{close();onAction(value,group)}
  const toggle=()=>{if(open){close();return}const box=trigger.current!.getBoundingClientRect(),el=menu.current!;el.showPopover();el.style.left=Math.min(box.right+7,window.innerWidth-el.offsetWidth-10)+'px';el.style.top=Math.max(8,Math.min(box.top,window.innerHeight-el.offsetHeight-10))+'px';setOpen(true);el.querySelector<HTMLButtonElement>('button')?.focus()}
