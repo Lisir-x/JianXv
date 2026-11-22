@@ -1,6 +1,7 @@
 /* Only the two child lists scroll; their controls sit on the hierarchy line. */
 aside>nav{overflow:visible;display:flex;flex-direction:column;min-height:0}
 aside>nav>button,aside>nav>.nav-divider{flex:none}
+aside>nav>.nav-divider{margin-top:auto}
 .nav-module{display:flex;flex-direction:column;min-height:0;flex:0 1 auto}
 .nav-parent{flex:none}
 .nav-subwrap{position:relative;display:flex;min-height:0;margin:6px 6px 0 14px;padding-left:16px}
