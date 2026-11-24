@@ -152,6 +152,8 @@ else {
           case 'complete':data=service.complete(payload.id,payload.done);break
           case 'delete':data=service.delete(payload.id,payload.scope);break
           case 'readNotices':data=service.readNotices();break
+          case 'deleteNotice':data=service.deleteNotice(payload.id);break
+          case 'deleteReadNotices':data=service.deleteReadNotices();break
           case 'updateInfo':data={version:app.getVersion(),...updateLocation(programHome,registeredInstallLocations(),app.isPackaged)};break
           case 'prepareLocalUpdate':{
             localUpdate.cancel()
