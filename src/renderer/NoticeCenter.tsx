@@ -24,7 +24,7 @@ export function NoticeCenter({notices,groups,onClose,onChanged,onOpen}:{notices:
     {n.missed&&<span>启动／恢复补记</span>}{n.system==='failed'&&<span>通知失败已保留</span>}
    </div>
   </div>
-  <div className="notice-actions">{n.read?<button className="quiet notice-delete" disabled={busy} onClick={()=>setConfirm(n.id)}>删除</button>:<button className="quiet notice-action" disabled={busy} onClick={()=>void markRead(n.id)}>标为已读</button>}</div>
+  <div className="notice-actions">{n.read?<button className="quiet notice-delete" disabled={busy} onClick={()=>setConfirm(n.id)}>删除</button>:<button className="quiet notice-mark" disabled={busy} onClick={()=>void markRead(n.id)}>标为已读</button>}</div>
  </article>
  return <>
   <Modal title="提醒记录" onClose={onClose}>

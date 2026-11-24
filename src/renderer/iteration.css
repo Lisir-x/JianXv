@@ -87,10 +87,14 @@ aside>nav>.nav-divider{margin-top:auto}
 .modal .notice-list .notice-name:hover{color:var(--seal);text-decoration:underline}
 .notice-list .notice-category,.notice-list .notice-meta{font-size:12px;color:var(--ink-muted);overflow-wrap:anywhere}
 .notice-list .notice-meta{margin-top:3px;font-variant-numeric:tabular-nums}
-.modal .notice-list :is(.notice-action,.notice-delete){min-height:32px;padding:4px 8px;border:1px solid transparent;background:transparent;box-shadow:none;color:var(--ink-muted);font-size:13px;white-space:nowrap}
+.modal .notice-list :is(.notice-action,.notice-mark,.notice-delete){min-height:32px;padding:4px 8px;border:1px solid transparent;background:transparent;box-shadow:none;color:var(--ink-muted);font-size:13px;white-space:nowrap}
 .modal .notice-list .notice-action:hover:enabled{background:var(--paper-inset);color:var(--ink)}
 .modal .notice-list :is(.notice-delete,.notice-clear){color:var(--seal)}
-.modal .notice-list .notice-delete{background:var(--seal-wash);border-color:var(--seal-edge)}
-.modal .notice-list :is(.notice-delete,.notice-clear):hover:enabled{background:var(--seal-wash);border-color:var(--seal-edge);color:var(--seal)}
+.modal .notice-list .notice-actions button{padding-inline:10px;border-radius:7px}
+.modal .notice-list .notice-mark{background:var(--paper-raised);border-color:var(--line-strong);color:var(--ink)}
+.modal .notice-list .notice-mark:hover:enabled{background:var(--paper-inset);border-color:var(--ink-accent)}
+.modal .notice-list .notice-delete{background:var(--paper-raised);border-color:var(--seal-edge)}
+.modal .notice-list .notice-delete:hover:enabled{background:var(--seal-wash);border-color:var(--seal)}
+.modal .notice-list .notice-clear:hover:enabled{background:var(--seal-wash);border-color:var(--seal-edge);color:var(--seal)}
 .notice-list .notice-empty{padding:14px;text-align:center;color:var(--ink-muted);border:1px dashed var(--line-strong);border-radius:8px}
 @media(max-width:560px){.modal:has(> .notice-list)>header,.notice-list{padding-inline:14px}.modal .notice-list .notice-record{padding-inline:10px;gap:8px}}

@@ -15,6 +15,17 @@ for (const unreadCount of [1,12]) test(`提醒记录紧凑布局与管理（${un
   const markAll=modal.locator('.notice-section').first().getByRole('button',{name:'全部标为已读'})
   const clear=modal.locator('.notice-section').last().getByRole('button',{name:'清空已读'})
   await expect(markAll).toHaveCSS('background-color','rgba(0, 0, 0, 0)')
+  if(unreadCount===1){
+   for(const button of [first.getByRole('button',{name:'标为已读',exact:true}),modal.getByRole('button',{name:'删除',exact:true}).first()]){
+    await modal.locator('h2').hover()
+    const background=await button.evaluate(el=>getComputedStyle(el).backgroundColor)
+    const border=await button.evaluate(el=>getComputedStyle(el).borderTopColor)
+    expect(background).not.toBe('rgba(0, 0, 0, 0)')
+    await button.hover()
+    await expect(button).not.toHaveCSS('background-color',background)
+    await expect(button).not.toHaveCSS('border-top-color',border)
+   }
+  }
   await expect(list.locator('.notice-record').nth(unreadCount-1)).toContainText('新提醒事项')
   await expect(first.locator('.notice-count')).toHaveText('未读')
   await expect(first.locator('.notice-meta')).toContainText('计划')
