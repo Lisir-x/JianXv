@@ -11,6 +11,35 @@ export function NoticeCenter({notices,groups,onClose,onChanged,onOpen}:{notices:
  const open=async(notice:Notice)=>{const result=await call<Task|undefined>('detail',{id:notice.taskId});onClose();if(result)onOpen(result)}
  const markAll=async()=>{setBusy(true);setError('');try{await call('readNotices');await onChanged()}catch(e){setError((e as Error).message)}finally{setBusy(false)}}
  const confirmAction=async()=>{if(!confirm)return;setBusy(true);setError('');try{await call(confirm==='clear'?'deleteReadNotices':'deleteNotice',confirm==='clear'?{}:{id:confirm});setConfirm(null);await onChanged()}catch(e){setError((e as Error).message)}finally{setBusy(false)}}
- const record=(n:Notice)=><article className={'notice-record '+(n.read?'read':'unread')} key={n.id}><span className="notice-dot" aria-hidden="true"/><div className="notice-copy"><button className="notice-name" onClick={()=>void open(n)}>{n.name}</button><div className="notice-meta"><span>{n.kind==='study'?'学习':'游戏'} · {groupName(n.cat)}</span></div><div className="notice-times"><span>计划时间 {formatTime(n.scheduledAt)}</span><span>记录时间 {formatTime(n.recordedAt)}</span></div>{(n.missed||n.system==='failed')&&<div className="notice-flags">{n.missed&&<strong>启动／恢复补记</strong>}{n.system==='failed'&&<strong>通知失败已保留</strong>}</div>}</div><div className="notice-actions">{n.read?<button className="danger notice-delete" disabled={busy} onClick={()=>setConfirm(n.id)}>删除</button>:<button disabled={busy} onClick={()=>void call('readNotices').then(onChanged).catch(e=>setError(e.message))}>标为已读</button>}</div></article>
- return <><Modal title="提醒记录" onClose={onClose}><div className="notice-toolbar"><p><strong>{unread.length}</strong> 条未读</p><div className="notice-toolbar-actions"><button className="quiet" disabled={busy||!read.length} onClick={()=>setConfirm('clear')}>清空已读</button><button disabled={busy||!unread.length} onClick={()=>void markAll()}>全部标为已读</button></div></div>{error&&<p className="error" role="alert">{error}</p>}<section className="notice-section"><h3>未读提醒<span>{unread.length}</span></h3>{unread.length?unread.map(record):<p className="notice-empty">暂无未读提醒</p>}</section><section className="notice-section"><h3>已读提醒<span>{read.length}</span></h3>{read.length?read.map(record):<p className="notice-empty">暂无已读提醒</p>}</section></Modal>{confirm&&<Confirm title={confirm==='clear'?'清空已读提醒':'删除已读提醒'} label={confirm==='clear'?'确认清空':'确认删除'} danger onCancel={()=>setConfirm(null)} onConfirm={confirmAction}><p>{confirm==='clear'?'确认清空全部已读提醒？':'确认删除这条已读提醒？'}</p></Confirm>}</>
+ const record=(n:Notice)=><article className={'notice-record '+(n.read?'read':'unread')} key={n.id}>
+  <div className="notice-copy">
+   <div className="notice-title-line">
+    {!n.read&&<span className="notice-dot" aria-hidden="true"/>}
+    <button className="quiet notice-name" onClick={()=>void open(n)}>{n.name}</button>
+    {!n.read&&<span className="notice-count">未读</span>}
+    <span className="notice-category">{n.kind==='study'?'学习':'游戏'} · {groupName(n.cat)}</span>
+   </div>
+   <div className="notice-meta">
+    <span>计划 {formatTime(n.scheduledAt)}</span><span>记录 {formatTime(n.recordedAt)}</span>
+    {n.missed&&<span>启动／恢复补记</span>}{n.system==='failed'&&<span>通知失败已保留</span>}
+   </div>
+  </div>
+  <div className="notice-actions">{n.read?<button className="quiet notice-delete" disabled={busy} onClick={()=>setConfirm(n.id)}>删除</button>:<button className="quiet notice-action" disabled={busy} onClick={()=>void markAll()}>标为已读</button>}</div>
+ </article>
+ return <>
+  <Modal title="提醒记录" onClose={onClose}>
+   <div className="notice-list" tabIndex={0} role="region" aria-label="提醒列表">
+    {error&&<p className="error" role="alert">{error}</p>}
+    <section className="notice-section">
+     <div className="notice-group"><h3>未读提醒<span className="notice-count">{unread.length}</span></h3><button className="quiet notice-action" disabled={busy||!unread.length} onClick={()=>void markAll()}>全部标为已读</button></div>
+     {unread.length?unread.map(record):<p className="notice-empty">暂无未读提醒</p>}
+    </section>
+    <section className="notice-section">
+     <div className="notice-group"><h3>已读提醒<span className="notice-count">{read.length}</span></h3><button className="quiet notice-action notice-clear" disabled={busy||!read.length} onClick={()=>setConfirm('clear')}>清空已读</button></div>
+     {read.length?read.map(record):<p className="notice-empty">暂无已读提醒</p>}
+    </section>
+   </div>
+  </Modal>
+  {confirm&&<Confirm title={confirm==='clear'?'清空已读提醒':'删除已读提醒'} label={confirm==='clear'?'确认清空':'确认删除'} danger onCancel={()=>setConfirm(null)} onConfirm={confirmAction}><p>{confirm==='clear'?'确认清空全部已读提醒？':'确认删除这条已读提醒？'}</p></Confirm>}
+ </>
 }
