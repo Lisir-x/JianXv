@@ -18,5 +18,5 @@ export class Recovery {
  }
  commit(token:string){if(this.busy)throw Error('备份恢复正在进行');if(!this.pending||this.pending.token!==token)throw Error('导入预览已失效，请重新选择备份');const inspected=Store.inspect(this.pending.path);this.busy=true;try{this.store.write(inspected.state);this.cancel();return true}finally{this.busy=false}}
  cancel(){if(this.pending){rmSync(this.pending.path,{force:true});this.pending=null}}
- clear(word:string){if(word!=='清空')throw Error('请输入“清空”后确认');if(this.busy)throw Error('备份恢复正在进行');this.cancel();this.store.mutate(s=>{const fresh=initialState(this.now());s.groups=fresh.groups;s.items=[];s.series=[];s.exceptions=[];s.notices=[];s.settings.lastScan=this.now()})}
+ clear(word:string){if(word!=='清空')throw Error('请输入“清空”后确认');if(this.busy)throw Error('备份恢复正在进行');this.cancel();this.store.mutate(s=>{const fresh=initialState(this.now());s.groups=fresh.groups;s.items=[];s.series=[];s.exceptions=[];s.notices=[];delete s.settings.dismissedNoticeIds;s.settings.lastScan=this.now()})}
 }

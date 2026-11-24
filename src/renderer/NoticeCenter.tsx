@@ -9,7 +9,7 @@ export function NoticeCenter({notices,groups,onClose,onChanged,onOpen}:{notices:
  const ordered=useMemo(()=>[...notices].sort((a,b)=>Number(a.read)-Number(b.read)||b.recordedAt-a.recordedAt),[notices]),unread=ordered.filter(n=>!n.read),read=ordered.filter(n=>n.read)
  const groupName=(id:string)=>groups.find(g=>g.id===id)?.name??'已删除'
  const open=async(notice:Notice)=>{const result=await call<Task|undefined>('detail',{id:notice.taskId});onClose();if(result)onOpen(result)}
- const markAll=async()=>{setBusy(true);setError('');try{await call('readNotices');await onChanged()}catch(e){setError((e as Error).message)}finally{setBusy(false)}}
+ const markRead=async(id?:string)=>{setBusy(true);setError('');try{if(id===undefined)await call('readNotices');else await call('readNotice',{id});await onChanged()}catch(e){setError((e as Error).message)}finally{setBusy(false)}}
  const confirmAction=async()=>{if(!confirm)return;setBusy(true);setError('');try{await call(confirm==='clear'?'deleteReadNotices':'deleteNotice',confirm==='clear'?{}:{id:confirm});setConfirm(null);await onChanged()}catch(e){setError((e as Error).message)}finally{setBusy(false)}}
  const record=(n:Notice)=><article className={'notice-record '+(n.read?'read':'unread')} key={n.id}>
   <div className="notice-copy">
@@ -24,14 +24,14 @@ export function NoticeCenter({notices,groups,onClose,onChanged,onOpen}:{notices:
     {n.missed&&<span>启动／恢复补记</span>}{n.system==='failed'&&<span>通知失败已保留</span>}
    </div>
   </div>
-  <div className="notice-actions">{n.read?<button className="quiet notice-delete" disabled={busy} onClick={()=>setConfirm(n.id)}>删除</button>:<button className="quiet notice-action" disabled={busy} onClick={()=>void markAll()}>标为已读</button>}</div>
+  <div className="notice-actions">{n.read?<button className="quiet notice-delete" disabled={busy} onClick={()=>setConfirm(n.id)}>删除</button>:<button className="quiet notice-action" disabled={busy} onClick={()=>void markRead(n.id)}>标为已读</button>}</div>
  </article>
  return <>
   <Modal title="提醒记录" onClose={onClose}>
    <div className="notice-list" tabIndex={0} role="region" aria-label="提醒列表">
     {error&&<p className="error" role="alert">{error}</p>}
     <section className="notice-section">
-     <div className="notice-group"><h3>未读提醒<span className="notice-count">{unread.length}</span></h3><button className="quiet notice-action" disabled={busy||!unread.length} onClick={()=>void markAll()}>全部标为已读</button></div>
+     <div className="notice-group"><h3>未读提醒<span className="notice-count">{unread.length}</span></h3><button className="quiet notice-action" disabled={busy||!unread.length} onClick={()=>void markRead()}>全部标为已读</button></div>
      {unread.length?unread.map(record):<p className="notice-empty">暂无未读提醒</p>}
     </section>
     <section className="notice-section">

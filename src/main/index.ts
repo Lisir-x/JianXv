@@ -151,6 +151,7 @@ else {
           case 'save':data=service.save(payload.input as TaskInput,payload.id,payload.scope);break
           case 'complete':data=service.complete(payload.id,payload.done);break
           case 'delete':data=service.delete(payload.id,payload.scope);break
+          case 'readNotice':data=service.readNotice(payload.id);break
           case 'readNotices':data=service.readNotices();break
           case 'deleteNotice':data=service.deleteNotice(payload.id);break
           case 'deleteReadNotices':data=service.deleteReadNotices();break

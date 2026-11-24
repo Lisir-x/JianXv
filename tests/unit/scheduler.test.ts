@@ -8,6 +8,24 @@ import {Scheduler} from '../../src/main/scheduler'
 const make=()=>{const db=new Store(join(mkdtempSync(join(tmpdir(),'todo-alarm-')),'db.sqlite'));let now=Date.parse('2026-11-18T12:00:00Z');const svc=new Service(db,()=>now),submitted:string[]=[];const scheduler=new Scheduler(svc,n=>submitted.push(n.id));const input={...svc.defaultInput('study'),name:'提醒',cat:db.read().groups[0].id,remind:now+60000};return {db,svc,scheduler,input,submitted,advance:(n:number)=>{now+=n}}}
 describe('阶段9 持久化提醒',()=>{
  it('到点一次、重复扫描和重启不重复',()=>{const {db,svc,scheduler,input,submitted,advance}=make();svc.save(input);scheduler.scan('missed');advance(60000);expect(scheduler.scan()).toHaveLength(1);scheduler.scan();expect(submitted).toHaveLength(1);new Scheduler(svc,n=>submitted.push(n.id)).scan('missed');expect(submitted).toHaveLength(1);expect(db.read().notices).toHaveLength(1);db.close()})
+ it('标为已读只影响单条，删除及清空在重启扫描后都不会恢复',()=>{
+  const {db,svc,scheduler,input,advance,submitted}=make()
+  const a=svc.save(input),b=svc.save({...input,name:'另一条提醒'}),aId=`${a.id}@${input.remind}`,bId=`${b.id}@${input.remind}`
+  scheduler.scan();advance(60000);expect(scheduler.scan()).toHaveLength(2)
+  svc.readNotice(aId);expect(db.read().notices.find(n=>n.id===bId)?.read).toBe(false)
+  svc.deleteNotice(aId);expect(scheduler.scan()).toHaveLength(0)
+  expect(db.read().notices.map(n=>n.id)).toEqual([bId])
+  svc.readNotices();svc.deleteReadNotices();expect(scheduler.scan()).toHaveLength(0)
+  const path=db.path;db.close()
+  const reopened=new Store(path),service=new Service(reopened,()=>svc.now()),afterRestart=new Scheduler(service,n=>submitted.push(n.id))
+  try{
+   expect(afterRestart.scan('missed')).toHaveLength(0);expect(reopened.read().notices).toHaveLength(0)
+   expect(submitted).toHaveLength(2);expect(service.task(a.id)?.doneAt).toBeNull()
+   service.save({...input,remind:service.now()+60000},a.id);advance(60000)
+   expect(afterRestart.scan()?.map(n=>n.id)).toEqual([`${a.id}@${service.now()}`])
+   service.delete(a.id);expect(reopened.read().settings.dismissedNoticeIds).toEqual([bId])
+  }finally{reopened.close()}
+ })
  it('提前完成和删除不提醒，取消完成不重发旧提醒',()=>{const {db,svc,scheduler,input,submitted,advance}=make();const a=svc.save(input),b=svc.save({...input,name:'删除'});svc.complete(a.id,true);svc.delete(b.id);advance(60000);scheduler.scan();expect(submitted).toHaveLength(0);svc.complete(a.id,false);scheduler.scan();expect(db.read().notices).toHaveLength(1);expect(submitted).toHaveLength(0);db.close()})
  it('改新时间使旧计划失效，新时间只发送一次',()=>{const {db,svc,scheduler,input,submitted,advance}=make();const t=svc.save(input);scheduler.scan();svc.save({...input,remind:input.remind!+60000},t.id);advance(60000);scheduler.scan();expect(submitted).toHaveLength(0);advance(60000);scheduler.scan();expect(submitted).toHaveLength(1);svc.complete(t.id,true);svc.complete(t.id,false);scheduler.scan();expect(submitted).toHaveLength(1);db.close()})
  it('关闭系统通知仍有记录，启动与过去输入只补记',()=>{const {db,svc,scheduler,input,submitted,advance}=make();svc.save(input);db.mutate(s=>{s.settings.notification=false});advance(60000);scheduler.scan();expect(db.read().notices).toHaveLength(1);expect(submitted).toHaveLength(0);svc.save({...input,name:'过去输入'});advance(10000);scheduler.scan();expect(db.read().notices.every(n=>n.system==='not-requested')).toBe(true);new Scheduler(svc,n=>submitted.push(n.id)).scan('missed');expect(submitted).toHaveLength(0);db.close()})
