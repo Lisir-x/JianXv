@@ -31,7 +31,7 @@ export function NoticeCenter({notices,groups,onClose,onChanged,onOpen}:{notices:
    <div className="notice-list" tabIndex={0} role="region" aria-label="提醒列表">
     {error&&<p className="error" role="alert">{error}</p>}
     <section className="notice-section">
-     <div className="notice-group"><h3>未读提醒<span className="notice-count">{unread.length}</span></h3><button className="quiet notice-action" disabled={busy||!unread.length} onClick={()=>void markRead()}>全部标为已读</button></div>
+     <div className="notice-group"><h3>未读提醒<span className="notice-count">{unread.length}</span></h3><button className="quiet notice-action notice-mark-all" disabled={busy||!unread.length} onClick={()=>void markRead()}>全部标为已读</button></div>
      {unread.length?unread.map(record):<p className="notice-empty">暂无未读提醒</p>}
     </section>
     <section className="notice-section">
