@@ -99,3 +99,17 @@ aside>nav>.nav-divider{margin-top:auto}
 .modal .notice-list .notice-clear:hover:enabled{background:var(--seal-wash);border-color:var(--seal-edge);color:var(--seal)}
 .notice-list .notice-empty{padding:14px;text-align:center;color:var(--ink-muted);border:1px dashed var(--line-strong);border-radius:8px}
 @media(max-width:560px){.modal:has(> .notice-list)>header,.notice-list{padding-inline:14px}.modal .notice-list .notice-record{padding-inline:10px;gap:8px}}
+
+/* Keep all fields above the fold in the new-activity dialog. */
+.activity-cycle-fields{display:grid;gap:12px}
+.modal:has(> .compact-activity-editor){padding:16px 20px}
+.modal:has(> .compact-activity-editor)>header{margin-bottom:10px}
+.compact-activity-editor .form-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 12px}
+.compact-activity-editor :is(label,.date-time-field){gap:3px;min-width:0}
+.compact-activity-editor :is(input:not([type=checkbox]),select,button,textarea){min-height:32px;padding-block:4px}
+.compact-activity-editor .form-grid>label:has(:is([name=name],[name=cat],textarea,[name=reward])){grid-column:auto}
+.compact-activity-editor textarea{height:52px;resize:vertical}
+.compact-activity-editor .activity-cycle-fields{grid-template-columns:auto minmax(0,1fr) minmax(0,1fr);align-items:end}
+.compact-activity-editor .activity-cycle-fields .scope-label{min-height:32px;white-space:nowrap;margin:0}
+.compact-activity-editor footer{margin-top:8px;padding-top:6px;bottom:-16px}
+@media(max-width:500px){.compact-activity-editor .activity-cycle-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.compact-activity-editor .activity-cycle-fields .scope-label{grid-column:1/-1}}
