@@ -17,6 +17,7 @@ test('游戏版本时间默认填充，游戏和学习支持键入并保存时�
   const local=(ms:number)=>{const d=new Date(ms);return new Date(ms-d.getTimezoneOffset()*60000).toISOString().slice(0,16).replace('T',' ')}
   await expect(editor.getByLabel('开始时间 *',{exact:true})).toHaveValue(local(start))
   await expect(editor.getByLabel('结束时间 *',{exact:true})).toHaveValue(local(end))
+  await expect(editor.getByLabel('提醒时间（可留空）',{exact:true})).toHaveAttribute('placeholder','年-月-日 时:分')
   await editor.getByLabel('活动名称 *').fill('手输活动')
   await editor.getByLabel('开始时间 *',{exact:true}).fill(local(now))
   await editor.getByLabel('结束时间 *',{exact:true}).fill(local(now+3600000))
