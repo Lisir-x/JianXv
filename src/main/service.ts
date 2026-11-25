@@ -4,7 +4,7 @@ import { localZone,stateOf,sortTasks,validateInput,periodicInput,addDays } from 
 import { Store } from './store'
 import { occurrence,segmentFor,currentIndex,currentActivity } from '../shared/recurrence'
 import {validateGameVersion,renewGameVersion} from '../shared/game-version'
-import {gameCalendar} from '../shared/game-calendar'
+import {gameCalendar,overlapsVersion} from '../shared/game-calendar'
 import {routinePeriod,routineDone,validateRoutineSettings} from '../shared/routine'
 export class Service {
  constructor(readonly store:Store,public clock:()=>number=()=>Date.now()){}
@@ -12,7 +12,7 @@ export class Service {
  pinGroup(id:string,pinned:boolean){return this.store.mutate(s=>{if(typeof pinned!=='boolean')throw Error('置顶状态无效');const g=s.groups.find(g=>g.id===id);if(!g)throw Error('子模块不存在');g.pinnedAt=pinned?Math.max(this.now(),...s.groups.filter(x=>x.kind===g.kind).map(x=>(x.pinnedAt??0)+1)):null;g.updatedAt=this.now();return g})}
  calendar(cat='',limit=500){this.rollCycles();return gameCalendar(this.store.read(),this.now(),cat,limit)}
  addGroup(kind:Kind,name:string,version?:GameVersion){return this.store.mutate(s=>{name=name?.trim();if(!['study','game'].includes(kind)||!name)throw Error('请填写名称');if(s.groups.some(g=>g.kind===kind&&g.name===name))throw Error('同一模块已存在该名称');if(version&&kind!=='game')throw Error('学习分类不能包含游戏版本');const g:Group={id:randomUUID(),kind,name,createdAt:this.now(),updatedAt:this.now(),...(version?{version:validateGameVersion(version)}:{})};s.groups.push(g);return g})}
- updateGame(id:string,name:string,version:GameVersion){return this.store.mutate(s=>{const g=s.groups.find(g=>g.id===id&&g.kind==='game');if(!g)throw Error('游戏不存在');name=name?.trim();if(!name)throw Error('请填写名称');if(s.groups.some(x=>x.id!==id&&x.kind==='game'&&x.name===name))throw Error('同一模块已存在该名称');const checked=validateGameVersion(version);g.name=name;g.version=checked;g.updatedAt=this.now();return g})}
+ updateGame(id:string,name:string,version:GameVersion){return this.store.mutate(s=>{const g=s.groups.find(g=>g.id===id&&g.kind==='game');if(!g)throw Error('游戏不存在');name=name?.trim();if(!name)throw Error('请填写名称');if(s.groups.some(x=>x.id!==id&&x.kind==='game'&&x.name===name))throw Error('同一模块已存在该名称');const checked=validateGameVersion(version),previous=g.version;if(previous)this.captureActivityVersions(s,id,previous);g.name=name;g.version=checked;g.updatedAt=this.now();return g})}
  renameGroup(id:string,name:string){return this.store.mutate(s=>{const g=s.groups.find(g=>g.id===id);if(!g)throw Error('子模块不存在');name=name?.trim();if(!name)throw Error('请填写名称');if(s.groups.some(x=>x.id!==id&&x.kind===g.kind&&x.name===name))throw Error('同一模块已存在该名称');g.name=name;g.updatedAt=this.now()})}
  groupCounts(id:string){const s=this.store.read();return {items:s.items.filter(t=>t.cat===id).length,series:s.series.filter(x=>x.segments.some(seg=>seg.base.cat===id)).length,instances:s.exceptions.filter(x=>!x.deleted&&this.task(x.id,s)?.cat===id).length,routines:s.groups.find(g=>g.id===id)?.routineTasks?.length??0}}
  setRoutineSettings(id:string,input:RoutineSettings){return this.store.mutate(s=>{const g=s.groups.find(g=>g.id===id&&g.kind==='game');if(!g)throw Error('游戏不存在');const raw=validateRoutineSettings({daily:input?.daily,weekly:input?.weekly,weekday:input?.weekday}),old=g.routineSettings,now=this.now();const dailyChanged=!!old&&old.daily!==raw.daily,weeklyChanged=!!old&&(old.weekly!==raw.weekly||old.weekday!==raw.weekday);g.routineSettings={...raw,...(dailyChanged?{dailyResetAt:now}:old?.dailyResetAt!==undefined?{dailyResetAt:old.dailyResetAt}:{}),...(weeklyChanged?{weeklyResetAt:now}:old?.weeklyResetAt!==undefined?{weeklyResetAt:old.weeklyResetAt}:{})};for(const t of g.routineTasks??[])if(t.kind==='daily'?dailyChanged:weeklyChanged)t.donePeriod=null;g.updatedAt=now;return g.routineSettings})}
@@ -25,8 +25,9 @@ export class Service {
   for(const series of s.series){series.segments=series.segments.filter(seg=>seg.base.cat!==id)}s.series=s.series.filter(x=>x.segments.length);s.exceptions=s.exceptions.filter(ex=>s.series.some(x=>x.id===ex.seriesId&&segmentFor(x,ex.index)))
   s.groups=s.groups.filter(g=>g.id!==id);this.pruneNotices(s)
  })}
+ private captureActivityVersions(s:State,id:string,version:GameVersion){for(const task of s.items)if(task.cat===id&&!task.activityVersion&&overlapsVersion(task,version))task.activityVersion=version.number}
  rollCycles(){const s=this.store.read();let changed=false
-  for(const group of s.groups){if(group.version){const next=renewGameVersion(group.version,this.now());if(next!==group.version){group.version=next;group.updatedAt=this.now();changed=true}}}
+  for(const group of s.groups){if(group.version){const next=renewGameVersion(group.version,this.now());if(next!==group.version){this.captureActivityVersions(s,group.id,group.version);group.version=next;group.updatedAt=this.now();changed=true}}}
   for(const series of s.series){if(!series.currentOnly){for(const seg of series.segments){if(seg.period){const lead=seg.base.remind===null?null:seg.base.end-seg.base.remind;seg.base.end=addDays(seg.base.start!,seg.period,seg.zone);seg.base.remind=lead===null?null:seg.base.end-lead}}series.currentOnly=true;changed=true}
    const cursor=series.currentIndex??series.segments[0].from,rule=segmentFor(series,cursor),raw=occurrence(series,cursor,{...s,exceptions:[]}),actual=occurrence(series,cursor,s)
    let hold=false
@@ -50,6 +51,11 @@ export class Service {
     this.pruneNotices(s);return this.task(task.id,s)!
    }
    if(data.period){const seriesId=randomUUID(),base={...task,doneAt:null};s.series.push({id:seriesId,currentOnly:true,currentIndex:0,firstId:old?.id,createdAt:task.createdAt,segments:[{from:0,until:null,period:data.period,base,zone:data.zone}]});if(old)s.items=s.items.filter(x=>x.id!==old.id);const first=occurrence(s.series[s.series.length-1],0,s)!;if(task.doneAt!==null)this.setException(s,first.id,{doneAt:task.doneAt});return this.task(first.id,s)!}
+   if(task.kind==='game'){
+    const version=s.groups.find(g=>g.id===task.cat)?.version
+    if(old?.cat===task.cat&&old.start===task.start&&old.end===task.end&&old.activityVersion)task.activityVersion=old.activityVersion
+    else if(version&&overlapsVersion(task,version))task.activityVersion=version.number
+   }
    if(old)s.items[s.items.findIndex(t=>t.id===id)]=task;else s.items.push(task);return task})
  }
  setException(s:State,id:string,patch:Partial<Task>,deleted=false){const original=this.task(id,s);const index=original?.index??Number(id.slice(id.lastIndexOf(':')+1)),seriesId=original?.seriesId??id.slice(0,id.lastIndexOf(':'));id=seriesId+':'+index;const ex=s.exceptions.find(x=>x.id===id);if(ex){ex.patch={...ex.patch,...patch};ex.deleted=deleted}else s.exceptions.push({id,seriesId,index,patch,deleted})}

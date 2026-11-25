@@ -13,7 +13,7 @@ export interface Group {id:string;kind:Kind;name:string;createdAt:number;updated
 export interface Task {
   id:string;kind:Kind;cat:string;name:string;start:number|null;end:number;remind:number|null;
   desc:string;reward:string;period:number;zone:string;createdAt:number;updatedAt:number;doneAt:number|null;
-  seriesId?:string;index?:number
+  seriesId?:string;index?:number;activityVersion?:string
 }
 export interface Segment {from:number;until:number|null;period:number;base:Task;zone:string}
 export interface Series {id:string;createdAt:number;segments:Segment[];firstId?:string;currentIndex?:number;currentOnly?:boolean}
