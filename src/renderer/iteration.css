@@ -114,6 +114,7 @@ aside>nav>.nav-divider{margin-top:auto}
 .compact-activity-editor footer{margin-top:8px;padding-top:6px;bottom:-16px}
 @media(max-width:500px){.compact-activity-editor .activity-cycle-fields{grid-template-columns:repeat(2,minmax(0,1fr))}.compact-activity-editor .activity-cycle-fields .scope-label{grid-column:1/-1}}
 
-.activity-card-tags{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:3px 5px;max-width:65%;min-width:0}
-.activity-version{padding:0 5px;border:1px solid var(--line);border-radius:4px;background:var(--paper-inset);color:var(--ink);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}
+.activity-card-tags{display:flex;align-items:baseline;gap:5px;min-width:0}
+.activity-card-tags>span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.activity-version{flex-shrink:0;padding:0 5px;border:1px solid var(--line);border-radius:4px;background:var(--paper-inset);color:var(--ink);max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}
 .module-layout .task-row.activity-outside-version{border-style:dashed;background:var(--paper-inset)}
