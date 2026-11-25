@@ -118,3 +118,7 @@ aside>nav>.nav-divider{margin-top:auto}
 .activity-card-tags>span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .activity-version{flex-shrink:0;padding:0 5px;border:1px solid var(--line);border-radius:4px;background:var(--paper-inset);color:var(--ink);max-width:55%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}
 .module-layout .task-row.activity-outside-version{border-style:dashed;background:var(--paper-inset)}
+
+.version-options{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto;gap:12px;align-items:end}
+.version-options label,.version-options input:not([type=checkbox]){min-width:0}
+.version-options .version-renew{white-space:nowrap;margin:0}
