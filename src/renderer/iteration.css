@@ -107,7 +107,7 @@ aside>nav>.nav-divider{margin-top:auto}
 .compact-activity-editor .form-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 12px}
 .compact-activity-editor :is(label,.date-time-field){gap:3px;min-width:0}
 .compact-activity-editor :is(input:not([type=checkbox]),select,button,textarea){min-height:32px;padding-block:4px}
-.compact-activity-editor .form-grid>label:has(:is([name=name],[name=cat],textarea,[name=reward])){grid-column:auto}
+:is(.compact-activity-editor,.study-task-editor) .form-grid>label:has(:is([name=name],[name=cat])){grid-column:auto}
 .compact-activity-editor textarea{height:52px;resize:vertical}
 .compact-activity-editor .activity-cycle-fields{grid-template-columns:auto minmax(0,1fr) minmax(0,1fr);align-items:end}
 .compact-activity-editor .activity-cycle-fields .scope-label{min-height:32px;white-space:nowrap;margin:0}
