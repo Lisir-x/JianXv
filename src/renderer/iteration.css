@@ -116,5 +116,4 @@ aside>nav>.nav-divider{margin-top:auto}
 
 .activity-card-tags{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:3px 5px;max-width:65%;min-width:0}
 .activity-version{padding:0 5px;border:1px solid var(--line);border-radius:4px;background:var(--paper-inset);color:var(--ink);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px}
-.activity-version-outside{font-size:11px;color:var(--ink-muted);white-space:nowrap}
 .module-layout .task-row.activity-outside-version{border-style:dashed;background:var(--paper-inset)}

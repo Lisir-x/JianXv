@@ -21,7 +21,7 @@ export interface Exception {id:string;seriesId:string;index:number;patch:Partial
 export interface Notice {id:string;taskId:string;scheduledAt:number;recordedAt:number;missed:boolean;read:boolean;name:string;kind:Kind;cat:string;system:'not-requested'|'submitted'|'failed'}
 export interface Settings {notification:boolean;startup:boolean;trayExplained:boolean;lastBackup:number|null;lastScan?:number|null;dismissedNoticeIds?:string[]}
 export interface State {groups:Group[];items:Task[];series:Series[];exceptions:Exception[];notices:Notice[];settings:Settings}
-export interface TaskInput {name:string;kind:Kind;cat:string;start:number|null;end:number;remind:number|null;desc:string;reward:string;period:number;zone:string}
+export interface TaskInput {name:string;kind:Kind;cat:string;start:number|null;end:number;remind:number|null;desc:string;reward:string;period:number;zone:string;activityVersion?:string}
 export type TaskCounts=Record<Status|'all',number>
 export interface Snapshot {counts:TaskCounts;moduleCounts:Record<Kind,TaskCounts>;groupCounts:Record<string,TaskCounts>;upcoming:Task[];moduleOverdue:Partial<Record<Kind,Task>>;groups:Group[];tasks:Task[];recent:Task[];next:Task|null;overdue:Task[];overdueTotal:number;routines:RoutineView[];notices:Notice[];settings:Settings;now:number;path:string;hasMore:boolean;notificationSupported:boolean;startupActual:boolean}
 export interface Result<T=unknown> {ok:boolean;data?:T;error?:string}

@@ -15,7 +15,8 @@ export function validateInput(raw:TaskInput,groups:Group[]):TaskInput {
  if(!Number.isInteger(raw.period)||raw.period<0||(raw.kind==='study'&&raw.period!==0))throw Error('周期必须为正整数天或不重复')
  if(!DateTime.now().setZone(raw.zone).isValid)throw Error('时间区域无效')
  if(raw.period>0)addDays(raw.start!,raw.period,raw.zone)
- return {...raw,name:raw.name.trim(),desc:String(raw.desc??''),reward:String(raw.reward??''),start:raw.kind==='study'?null:raw.start}
+ if(raw.activityVersion!==undefined&&(raw.kind!=='game'||typeof raw.activityVersion!=='string'||raw.activityVersion.trim().length>100))throw Error('活动版本号无效')
+ return {...raw,activityVersion:raw.activityVersion?.trim()||undefined,name:raw.name.trim(),desc:String(raw.desc??''),reward:String(raw.reward??''),start:raw.kind==='study'?null:raw.start}
 }
 export function periodicInput(raw:TaskInput):TaskInput {
  if(raw.kind!=='game'||!raw.period)return raw

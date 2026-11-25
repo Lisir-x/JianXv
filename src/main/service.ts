@@ -45,17 +45,17 @@ export class Service {
  task(id:string,s:State=this.store.read()):Task|undefined{const item=s.items.find(t=>t.id===id);if(item)return item;return s.series.map(series=>currentActivity(series,s,this.now())).find(t=>t?.id===id)}
  save(input:TaskInput,id?:string,scope:Scope='one'){
   this.rollCycles();return this.store.mutate(s=>{const data=validateInput(periodicInput(input),s.groups),old=id?this.task(id,s):undefined;if(id&&!old)throw Error('事项已删除或已轮换');if(old&&old.kind!==data.kind)throw Error('不能跨主模块迁移');const task:Task={...data,id:old?.id??randomUUID(),createdAt:old?.createdAt??this.now(),updatedAt:this.now(),doneAt:old?.doneAt??null}
+   if(task.kind==='game'&&!task.activityVersion){
+    const version=s.groups.find(g=>g.id===task.cat)?.version
+    if(old?.cat===task.cat&&old.start===task.start&&old.end===task.end&&old.activityVersion)task.activityVersion=old.activityVersion
+    else if(!data.period&&version&&overlapsVersion(task,version))task.activityVersion=version.number
+   }
    if(old?.seriesId){const series=s.series.find(x=>x.id===old.seriesId)!;const index=old.index!;task.seriesId=series.id;task.index=index
     if(scope==='one'&&old.period){if(data.period!==old.period)throw Error('修改周期需要选择本期及以后');this.setException(s,task.id,{...task})}
     else{const completedAfter=!data.period?s.exceptions.filter(ex=>ex.seriesId===series.id&&ex.index>index).map(ex=>this.task(ex.id,s)).filter((t):t is Task=>!!t&&t.doneAt!==null):[];series.segments=series.segments.filter(seg=>seg.from<index).map(seg=>({...seg,until:seg.until===null||seg.until>index?index:seg.until}));series.segments.push({from:index,until:data.period?null:index+1,period:data.period,base:{...task,doneAt:null},zone:data.zone});for(const ex of s.exceptions.filter(ex=>ex.seriesId===series.id&&ex.index>=index)){ex.patch={doneAt:ex.patch.doneAt??null,updatedAt:this.now()}}if(old.doneAt!==null)this.setException(s,task.id,{doneAt:old.doneAt});if(!data.period){s.items.push({...task,seriesId:undefined,index:undefined},...completedAfter.map(saved=>({...saved,seriesId:undefined,index:undefined,period:0})));series.segments=series.segments.filter(seg=>seg.from<index);s.exceptions=s.exceptions.filter(ex=>ex.seriesId!==series.id||ex.index<index);if(!series.segments.length)s.series=s.series.filter(x=>x.id!==series.id)}}
     this.pruneNotices(s);return this.task(task.id,s)!
    }
    if(data.period){const seriesId=randomUUID(),base={...task,doneAt:null};s.series.push({id:seriesId,currentOnly:true,currentIndex:0,firstId:old?.id,createdAt:task.createdAt,segments:[{from:0,until:null,period:data.period,base,zone:data.zone}]});if(old)s.items=s.items.filter(x=>x.id!==old.id);const first=occurrence(s.series[s.series.length-1],0,s)!;if(task.doneAt!==null)this.setException(s,first.id,{doneAt:task.doneAt});return this.task(first.id,s)!}
-   if(task.kind==='game'){
-    const version=s.groups.find(g=>g.id===task.cat)?.version
-    if(old?.cat===task.cat&&old.start===task.start&&old.end===task.end&&old.activityVersion)task.activityVersion=old.activityVersion
-    else if(version&&overlapsVersion(task,version))task.activityVersion=version.number
-   }
    if(old)s.items[s.items.findIndex(t=>t.id===id)]=task;else s.items.push(task);return task})
  }
  setException(s:State,id:string,patch:Partial<Task>,deleted=false){const original=this.task(id,s);const index=original?.index??Number(id.slice(id.lastIndexOf(':')+1)),seriesId=original?.seriesId??id.slice(0,id.lastIndexOf(':'));id=seriesId+':'+index;const ex=s.exceptions.find(x=>x.id===id);if(ex){ex.patch={...ex.patch,...patch};ex.deleted=deleted}else s.exceptions.push({id,seriesId,index,patch,deleted})}
