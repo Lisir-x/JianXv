@@ -5,3 +5,30 @@ import {join} from 'node:path'
 const now=Date.parse('2026-11-19T12:00:00+08:00'),day=86400000
 test('单游戏版本日历：全状态/跨版本裁切/今天竖线/未来预览不创建事项',async()=>{const app=await electron.launch({args:['.'],env:{...process.env,TODO_TEST:'1',TODO_NOW:String(now),TODO_DATA_DIR:mkdtempSync(join(tmpdir(),'todo-calendar-ui-'))}});try{const page=await app.firstWindow();await page.waitForSelector('nav');await page.evaluate(async({now,day})=>{const g=await window.todo.call<any>('addGroup',{kind:'game',name:'版本日历游戏',version:{number:'2.4',start:now-2*day,end:now+10*day}}),base={kind:'game',cat:g.data.id,name:'跨版本活动',start:now-3*day,end:now+day,remind:null,desc:'跨边界活动详情',reward:'100奖励',period:0,zone:'Asia/Shanghai'};await window.todo.call('save',{input:base});await window.todo.call('save',{input:{...base,name:'普通当前活动',start:now,end:now+2*day}});const done=await window.todo.call<any>('save',{input:{...base,name:'已完成活动',start:now-day,end:now+day}});await window.todo.call('complete',{id:done.data.id,done:true});await window.todo.call('save',{input:{...base,name:'周期活动',start:now,period:3}});await window.todo.call('save',{input:{...base,name:'版本外活动',start:now+11*day,end:now+12*day}})}, {now,day});await page.locator('nav').getByRole('button',{name:'版本日历游戏',exact:true}).click();await page.getByRole('button',{name:'已完成',exact:true}).click();const before=(await page.evaluate(()=>window.todo.call<any>('snapshot',{kind:'game',filter:'all'}))).data.counts.all;await page.getByRole('button',{name:'活动日历',exact:true}).click();await expect(page.getByRole('region',{name:'版本活动日历'})).toBeVisible();await expect(page.locator('.calendar-event-row')).toHaveCount(7);await expect(page.locator('.calendar-game-tab')).toHaveText('版本日历游戏');await expect(page.locator('.calendar-game-heading')).toContainText('2.4');await expect(page.locator('.calendar-event-name').filter({hasText:'版本外活动'})).toHaveCount(0);await expect(page.locator('.calendar-today-line')).toHaveCount(1);expect(await page.locator('.calendar-today-line').evaluate(el=>parseFloat(el.style.left))).toBeGreaterThan(0);expect(await page.locator('.calendar-marker-layer').evaluate(el=>Number(getComputedStyle(el).zIndex))).toBeGreaterThan(await page.locator('.calendar-event-bar').first().evaluate(el=>Number(getComputedStyle(el).zIndex)));await expect(page.locator('.calendar-event-row[data-preview=true]')).toHaveCount(3);const firstRow=page.locator('.calendar-event-row').first();await firstRow.locator('.calendar-event-bar').click();await expect(page.getByRole('dialog',{name:'活动详情'})).toContainText('跨边界活动详情');await page.getByRole('button',{name:'关闭',exact:true}).click();await page.locator('.calendar-event-bar.preview').first().click();await expect(page.getByRole('dialog',{name:'活动期次预览'})).toContainText('未创建待办');await expect(page.getByRole('dialog',{name:'活动期次预览'}).getByRole('button',{name:'标记完成',exact:true})).toHaveCount(0);await page.getByRole('button',{name:'关闭预览'}).click();const after=(await page.evaluate(()=>window.todo.call<any>('snapshot',{kind:'game',filter:'all'}))).data.counts.all;expect(after).toBe(before);await page.getByRole('button',{name:'事项列表',exact:true}).click();await expect(page.locator('.activity-calendar')).toHaveCount(0);await expect(page.locator('.task-name')).toHaveText('已完成活动')}finally{await app.close()}})
 test('旧游戏日历补全版本入口与无版本空状态',async()=>{const app=await electron.launch({args:['.'],env:{...process.env,TODO_TEST:'1',TODO_DATA_DIR:mkdtempSync(join(tmpdir(),'todo-calendar-legacy-'))}});try{const page=await app.firstWindow();await page.waitForSelector('nav');await page.evaluate(()=>window.todo.call('addGroup',{kind:'game',name:'旧游戏'}));await page.locator('nav').getByRole('button',{name:'旧游戏',exact:true}).click();await page.getByRole('button',{name:'活动日历',exact:true}).click();await expect(page.locator('.calendar-unconfigured')).toContainText('尚未填写当前版本');await page.getByRole('button',{name:'设置版本',exact:true}).click();await page.getByLabel('版本号 *',{exact:true}).fill('1.0');await page.getByRole('button',{name:'保存',exact:true}).click();await expect(page.locator('.calendar-game-heading')).toContainText('1.0');await expect(page.locator('.calendar-empty-row')).toBeVisible()}finally{await app.close()}})
+
+test('14 天预设可用；日历删除默认终止系列并立即移除所有预览',async()=>{
+ const app=await electron.launch({args:['.'],env:{...process.env,TODO_TEST:'1',TODO_NOW:String(now),TODO_DATA_DIR:mkdtempSync(join(tmpdir(),'todo-calendar-delete-'))}})
+ try{
+  const page=await app.firstWindow()
+  await page.waitForSelector('nav')
+  await page.evaluate(({now,day})=>window.todo.call('addGroup',{kind:'game',name:'周期删除测试',version:{number:'1.0',start:now-day,end:now+60*day}}),{now,day})
+  await page.locator('nav').getByRole('button',{name:'周期删除测试',exact:true}).click()
+  await page.getByRole('button',{name:/新增/}).first().click()
+  const editor=page.getByRole('dialog',{name:'新增活动'})
+  await editor.getByLabel('活动名称 *').fill('两周一轮')
+  await editor.getByLabel('周期性活动').check()
+  const cycle=editor.getByRole('combobox',{name:'重复周期'})
+  await expect(cycle.locator('option[value="7"]')).toHaveCount(0)
+  await cycle.selectOption('14')
+  await editor.getByRole('button',{name:'保存',exact:true}).click()
+  await expect(editor).toBeHidden()
+  await page.getByRole('button',{name:'活动日历',exact:true}).click()
+  await expect(page.locator('.calendar-event-row[data-preview=true]').first()).toBeVisible()
+  await page.locator('.calendar-event-row[data-preview=false] .calendar-event-bar').click()
+  await page.getByRole('button',{name:'删除',exact:true}).click()
+  const confirm=page.getByRole('dialog',{name:'删除周期活动'})
+  await expect(confirm.getByLabel('本期及以后',{exact:true})).toBeChecked()
+  await confirm.getByRole('button',{name:'确认删除'}).click()
+  await expect(page.locator('.calendar-event-row')).toHaveCount(0)
+ }finally{await app.close()}
+})
